@@ -1,10 +1,10 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-20 v1.00
+;; 2019-3-21 v1.01
 ;;
 ;; ＜内容＞
-;;   Gauche で、2次元の f64array を扱うためのモジュールです。
+;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
 ;;   gauche.array, eigenmat, blasmat モジュールよりも後に
 ;;   読み込んで使用することを想定しています。
 ;;
