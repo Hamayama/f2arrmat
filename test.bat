@@ -1,0 +1,2 @@
+gosh test.scm
+pause
