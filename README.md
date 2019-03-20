@@ -14,7 +14,7 @@
 
   - (備考) 本モジュールは、eigenmat モジュール ( https://github.com/Hamayama/eigenmat )  
     および、blasmat モジュール ( https://github.com/Hamayama/blasmat )  
-    が存在すれば、使用します(一部の演算が高速化されます)。
+    が存在すれば、使用します (一部の演算が高速化されます)。
 
 
 ## 使い方
@@ -53,14 +53,14 @@
     行列A のコピーを返します。
 
   - `(f2-array-copy! B A)`  
-    行列A のコピーを 行列B に代入します (行列B は変更されます)。  
+    行列A の内容を 行列B にコピーします (行列B は変更されます)。  
     戻り値は未定義です。
 
   - `(f2-array-map proc A B ...)`  
     行列A, 行列B ... の要素を引数として proc を呼び出し、結果の行列を作って返します。
 
   - `(f2-array-map! C proc A B ...)`  
-    行列A, 行列B ... の要素を引数として proc を呼び出し、結果を 行列C に代入します (行列C は変更されます)。  
+    行列A, 行列B ... の要素を引数として proc を呼び出し、結果を 行列C に格納します (行列C は変更されます)。  
     戻り値は未定義です。
 
   - `(make-f2-array ns ne ms me [maybe-init])`  
@@ -177,6 +177,10 @@
 1. 本モジュールは、標準の gauche.array モジュールの内部情報を使用したり、  
    一部を上書きしたりしています。  
    このため、Gauche の将来の変更で動作しなくなる可能性があります。
+
+2. 本モジュールは、eigenmat モジュール ( https://github.com/Hamayama/eigenmat )  
+   および、blasmat モジュール ( https://github.com/Hamayama/blasmat )  
+   が存在すれば、使用します (一部の演算が高速化されます)。
 
 
 ## 環境等
