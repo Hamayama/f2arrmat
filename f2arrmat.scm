@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-21 v1.01
+;; 2019-3-21 v1.02
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -41,8 +41,7 @@
     f2-array-transpose    f2-array-transpose!
     f2-array-row          f2-array-row!
     f2-array-col          f2-array-col!
-    f2-array-ra+b         f2-array-ra+b!
-    f2-array-ab+c         f2-array-ab+c!
+    f2-array-ra+b!        f2-array-ab+c!
     ))
 (select-module f2arrmat)
 
@@ -93,15 +92,23 @@
 (select-module f2arrmat)
 
 ;; 行列の情報取得(エラーチェックなし)
-(define-inline (array-rank   A)
-  (s32vector-length (slot-ref A 'start-vector)))
-(define-inline (array-start  A dim)
-  (s32vector-ref    (slot-ref A 'start-vector) dim))
-(define-inline (array-end    A dim)
-  (s32vector-ref    (slot-ref A 'end-vector)   dim))
-(define-inline (array-length A dim)
-  (- (s32vector-ref (slot-ref A 'end-vector)   dim)
-     (s32vector-ref (slot-ref A 'start-vector) dim)))
+(define-syntax array-rank
+  (syntax-rules ()
+    ((_ A)
+     (s32vector-length (slot-ref A 'start-vector)))))
+(define-syntax array-start
+  (syntax-rules ()
+    ((_ A dim)
+     (s32vector-ref    (slot-ref A 'start-vector) dim))))
+(define-syntax array-end
+  (syntax-rules ()
+    ((_ A dim)
+     (s32vector-ref    (slot-ref A 'end-vector)   dim))))
+(define-syntax array-length
+  (syntax-rules ()
+    ((_ A dim)
+     (- (s32vector-ref (slot-ref A 'end-vector)   dim)
+        (s32vector-ref (slot-ref A 'start-vector) dim)))))
 
 ;; 行列のタイプのチェック
 (define-syntax check-array-type
@@ -123,10 +130,10 @@
 
 ;; 行列の要素の参照(2次元のみ)
 (define (f2-array-ref A i j)
-  (let ((is (s32vector-ref (slot-ref A 'start-vector) 0))
-        (ie (s32vector-ref (slot-ref A 'end-vector)   0))
-        (js (s32vector-ref (slot-ref A 'start-vector) 1))
-        (je (s32vector-ref (slot-ref A 'end-vector)   1)))
+  (let ((is (array-start A 0))
+        (ie (array-end   A 0))
+        (js (array-start A 1))
+        (je (array-end   A 1)))
     (unless (and (<= is i) (< i ie) (<= js j) (< j je))
       (error "invalid index value"))
     (f64vector-ref (slot-ref A 'backing-storage)
@@ -135,10 +142,10 @@
 ;; 行列の要素の設定(2次元のみ)
 ;; (戻り値は未定義)
 (define (f2-array-set! A i j d)
-  (let ((is (s32vector-ref (slot-ref A 'start-vector) 0))
-        (ie (s32vector-ref (slot-ref A 'end-vector)   0))
-        (js (s32vector-ref (slot-ref A 'start-vector) 1))
-        (je (s32vector-ref (slot-ref A 'end-vector)   1)))
+  (let ((is (array-start A 0))
+        (ie (array-end   A 0))
+        (js (array-start A 1))
+        (je (array-end   A 1)))
     (unless (and (<= is i) (< i ie) (<= js j) (< j je))
       (error "invalid index value"))
     (f64vector-set! (slot-ref A 'backing-storage)
@@ -388,7 +395,7 @@
    (*blasmat-loaded*
     (lambda (ar ar0 ar1)
       (f64vector-fill! (slot-ref ar 'backing-storage) 0)
-      (blas-array-dgemm ar0 ar1 ar 1.0 1.0 #f #f)))
+      (blas-array-dgemm! ar0 ar1 ar 1.0 1.0 #f #f)))
    (*eigenmat-loaded*
     eigen-array-mul!)
    (else
@@ -584,47 +591,23 @@
 ;; == 以下では、blasmat モジュールがあれば使用する ==
 
 
-;; rA+B を計算
-(define f2-array-ra+b
-  (if *blasmat-loaded*
-    (lambda (r A B)
-      (let1 C (f2-array-copy B)
-        (blas-array-daxpy A C r)))
-    (lambda (r A B)
-      (let1 C (make-f2-array-same-shape B)
-        (f2-array-add-elements! C (f2-array-mul-elements! C A r) B)))))
-
-;; rA+B を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
+;; B = alpha A + B を計算
 (define f2-array-ra+b!
   (if *blasmat-loaded*
-    (lambda (C r A B)
-      (f2-array-copy! C B)
-      (blas-array-daxpy A C r))
-    (lambda (C r A B)
-      ;; C と B が同じ行列のときは、D を生成しないと壊れる
-      (let1 D (if (eq? C B) (make-f2-array-same-shape C) C)
-        (f2-array-add-elements! C (f2-array-mul-elements! D A r) B)))))
+    blas-array-daxpy!
+    (lambda (alpha A B)
+      (f2-array-add-elements! B (f2-array-mul-elements A alpha) B))))
 
-;; AB+C を計算
-(define f2-array-ab+c
-  (if *blasmat-loaded*
-    (lambda (A B C)
-      (let1 D (f2-array-copy C)
-        (blas-array-dgemm A B D 1.0 1.0 #f #f)))
-    (lambda (A B C)
-      (let1 D (make-f2-array-same-shape C)
-        (f2-array-add-elements! D (f2-array-mul! D A B) C)))))
-
-;; AB+C を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
+;; C = alpha A B + beta C を計算
 (define f2-array-ab+c!
   (if *blasmat-loaded*
-    (lambda (D A B C)
-      (f2-array-copy! D C)
-      (blas-array-dgemm A B D 1.0 1.0 #f #f))
-    (lambda (D A B C)
-      ;; D と C が同じ行列のときは、E を生成しないと壊れる
-      (let1 E (if (eq? D C) (make-f2-array-same-shape D) D)
-        (f2-array-add-elements! D (f2-array-mul! E A B) C)))))
+    blas-array-dgemm!
+    (lambda (A B C alpha beta trans-A trans-B)
+      (let ((TA (if trans-A (f2-array-transpose A) A))
+            (TB (if trans-B (f2-array-transpose B) B))
+            (D  (make-f2-array-same-shape C)))
+        (f2-array-add-elements!
+         C
+         (f2-array-mul-elements! D (f2-array-mul! D TA TB) alpha)
+         (f2-array-mul-elements! C C beta))))))
 

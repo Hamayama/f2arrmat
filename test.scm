@@ -169,23 +169,13 @@
          (f2-array-col! (make-f2-array 0 2 0 1) L 2) f2-array-nearly=?)
 
   (let1 B1 (f2-array-copy B)
-    (test* "f2-array-ra+b 1" #,(<f64array> (0 2 0 2) 7 10 13 16)
-           (f2-array-ra+b 2.0 A B1) f2-array-nearly=?)
-    )
-
-  (let1 B1 (f2-array-copy B)
     (test* "f2-array-ra+b! 1" #,(<f64array> (0 2 0 2) 7 10 13 16)
-           (f2-array-ra+b! B1 2.0 A B) f2-array-nearly=?)
-    )
-
-  (let1 C1 (f2-array-copy C)
-    (test* "f2-array-ab+c 1" #,(<f64array> (0 2 0 2) 20 23 44 51)
-           (f2-array-ab+c A B C1) f2-array-nearly=?)
+           (f2-array-ra+b! 2.0 A B1) f2-array-nearly=?)
     )
 
   (let1 C1 (f2-array-copy C)
     (test* "f2-array-ab+c! 1" #,(<f64array> (0 2 0 2) 20 23 44 51)
-           (f2-array-ab+c! C1 A B C) f2-array-nearly=?)
+           (f2-array-ab+c! A B C1 1.0 1.0 #f #f) f2-array-nearly=?)
     )
   )
 
