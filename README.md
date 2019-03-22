@@ -126,6 +126,27 @@
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
+  - `(f2-array-div-elements A B/r ...)`  
+    `(f2-array-div-elements! C A B/r ...)`  
+    行列A, 行列B/実数r, ... の要素の割り算を計算して返します。  
+    `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
+    (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
+
+  - `(f2-array-pow A r)`  
+    `(f2-array-pow! B A r)`  
+    行列A の要素を 実数r を用いてr乗した結果を返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-exp A)`  
+    `(f2-array-exp! B A)`  
+    行列A の要素を指数として、自然対数の底eのべき乗を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-log A)`  
+    `(f2-array-log! B A)`  
+    行列A の要素に対して、自然対数を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
   - `(f2-array-sigmoid A)`  
     `(f2-array-sigmoid! B A)`  
     行列A の要素に対して、シグモイド関数 を計算して返します。  
@@ -141,10 +162,36 @@
     行列A の要素に対して、ステップ関数 を計算して返します。  
     `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
 
+  - `(f2-array-sum A)`  
+    行列A の要素の和を計算して返します。
+
+  - `(f2-array-min A)`  
+    行列A の要素の最小値を返します。
+
+  - `(f2-array-max A)`  
+    行列A の要素の最大値を返します。
+
+  - `(f2-array-mean A)`  
+    行列A の要素の平均値を計算して返します。
+
+  - `(f2-array-trace A)`  
+    行列A のトレースを計算して返します。
+
+  - `(f2-array-determinant A)`  
+    行列A の行列式を計算して返します。
+
   - `(f2-array-transpose A)`  
     `(f2-array-transpose! B A)`  
     行列A の転置行列を返します。  
     `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-inverse A)`  
+    `(f2-array-inverse! B A)`  
+    行列A の逆行列を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。  
+    現状、逆行列が存在しない場合の動作が、eigenmat モジュールの有無によって変化します。  
+    eigenmat モジュールがある場合には、要素が +inf.0 や -inf.0 の行列が返ります。  
+    eigenmat モジュールがない場合には、#f が返ります。
 
   - `(f2-array-row A i)`  
     `(f2-array-row! B A i)`  
@@ -159,7 +206,7 @@
   - `(f2-array-ra+b! alpha A B)`  
     実数alpha と 行列A, B に対して、  
     B = alpha A + B を計算して返します (行列B は変更されます)。  
-    (本手続きは blasmat モジュールが存在するときのみ高速化されます)
+    (本手続きは blasmat モジュールが存在する場合に高速化されます)
 
   - `(f2-array-ab+c! A B C alpha beta trans-A trans-B)`  
     行列A, B, C と 実数alpha, beta に対して、  
@@ -169,7 +216,7 @@
     trans-B に #t を指定すると、行列B を転置して計算を行います。  
     trans-B に #f を指定すると、行列B を転置しません。  
     (行列A, B は変更されません。行列C は変更されます)  
-    (本手続きは blasmat モジュールが存在するときのみ高速化されます)
+    (本手続きは blasmat モジュールが存在する場合に高速化されます)
 
 
 ## その他 注意事項等
@@ -196,6 +243,11 @@
 - 2019-3-21  v1.02 f2-array-ra+b,f2-array-ab+cを削除  
   f2-array-ra+b!,f2-array-ab+c!の引数を変更  
   行列の情報取得をマクロ化
+- 2019-3-22  v1.03 f2-array-div-elements,f2-array-div-elements!,  
+  f2-array-pow,f2-array-pow!,f2-array-exp,f2-array-exp!,  
+  f2-array-log,f2-array-log!,f2-array-sum,f2-array-min,  
+  f2-array-max,f2-array-mean,f2-array-trace,f2-array-determinant,  
+  f2-array-inverseを追加
 
 
 (2019-3-21)
