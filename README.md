@@ -193,6 +193,14 @@
     eigenmat モジュールがある場合には、要素が +inf.0 や -inf.0 の行列が返ります。  
     eigenmat モジュールがない場合には、#f が返ります。
 
+  - `(f2-array-solve A B)`  
+    `(f2-array-solve! X A B)`  
+    AX=B となる 行列X を計算して返します。  
+    `!` がついたものは、結果を 行列X に格納して返します (行列X は変更されます)。  
+    現状、行列A の逆行列が存在しない場合の動作が、eigenmat モジュールの有無によって変化します。  
+    eigenmat モジュールがある場合には、要素が +inf.0 や -inf.0 の行列が返ります。  
+    eigenmat モジュールがない場合には、エラーが発生します。
+
   - `(f2-array-row A i)`  
     `(f2-array-row! B A i)`  
     行列A から i 行を抜き出して返します。  
@@ -202,6 +210,18 @@
     `(f2-array-col! B A j)`  
     行列A から j 列を抜き出して返します。  
     `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-block A i j p q)`  
+    `(f2-array-block! B A i j p q)`  
+    行列A から 開始位置が (i,j) でサイズが (p,q) の行列を抜き出して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-block-copy A i1 j1 p q B i2 j2)`  
+    `(f2-array-block-copy! C A i1 j1 p q B i2 j2)`  
+    行列A から 開始位置が (i1,j1) でサイズが (p,q) の行列を抜き出して、  
+    行列B の (i2,j2) の位置にコピーしたものを返します。  
+    (行列B は変更されません。戻り値を使用してください)  
+    `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。
 
   - `(f2-array-ra+b! alpha A B)`  
     実数alpha と 行列A, B に対して、  
@@ -226,7 +246,7 @@
 
 2. 本モジュールは、eigenmat モジュール ( https://github.com/Hamayama/eigenmat )  
    および、blasmat モジュール ( https://github.com/Hamayama/blasmat )  
-   が存在すれば、使用します (一部の演算が高速化されます)。
+   が存在すれば、内部で使用します (演算が高速化されます)。
 
 
 ## 環境等
@@ -248,6 +268,8 @@
   f2-array-log,f2-array-log!,f2-array-sum,f2-array-min,  
   f2-array-max,f2-array-mean,f2-array-trace,f2-array-determinant,  
   f2-array-inverseを追加
+- 2019-3-23  v1.04 f2-array-solve,f2-array-block,f2-array-block!,  
+  f2-array-block-copy,f2-array-block-copy!を追加
 
 
-(2019-3-21)
+(2019-3-23)

@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-22 v1.03
+;; 2019-3-23 v1.04
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -50,11 +50,11 @@
     f2-array-determinant
     f2-array-transpose    f2-array-transpose!
     f2-array-inverse      f2-array-inverse!
-    ;f2-array-solve        f2-array-solve!
+    f2-array-solve        f2-array-solve!
     f2-array-row          f2-array-row!
     f2-array-col          f2-array-col!
-    ;f2-array-block        f2-array-block!
-    ;f2-array-block-copy   f2-array-block-copy!
+    f2-array-block        f2-array-block!
+    f2-array-block-copy   f2-array-block-copy!
     f2-array-ra+b!        f2-array-ab+c!
     ))
 (select-module f2arrmat)
@@ -662,20 +662,44 @@
           ar2)
         #f))))
 
+;; AX=B となる X を求める
+(define f2-array-solve
+  (if *eigenmat-loaded*
+    eigen-array-solve
+    (lambda (ar1 ar2)
+      (let1 ar3 (array-div-left ar2 ar1)
+        ;; Gauche v0.9.6 以前で <array> が返る件の対策
+        (if (eq? (class-of ar3) <f64array>)
+          ar3
+          (f2-array-copy ar3))))))
+
+;; AX=B となる X を求める(破壊的変更版)
+;; (第1引数は結果を格納するためだけに使用)
+(define f2-array-solve!
+  (if *eigenmat-loaded*
+    eigen-array-solve!
+    (lambda (ar3 ar1 ar2)
+      (let1 ar4 (array-div-left ar2 ar1)
+        ;; Gauche v0.9.6 以前で <array> が返る件の対策
+        (f2-array-copy! ar3 (if (eq? (class-of ar4) <f64array>)
+                              ar4
+                              (f2-array-copy ar4)))
+        ar3))))
+
 ;; 行列から行を抜き出す(2次元のみ)
 (define f2-array-row
   (if *eigenmat-loaded*
     eigen-array-row
-    (lambda (ar1 i1)
+    (lambda (ar1 i1r)
       (check-array-type ar1)
       (check-array-rank ar1)
-      (let ((m1 (array-length ar1 1))
-            (is (array-start  ar1 0))
-            (ie (array-end    ar1 0))
+      (let ((n1 (array-length ar1 0))
+            (m1 (array-length ar1 1))
+            (i1 (- i1r (array-start ar1 0)))
             (v1 (slot-ref ar1 'backing-storage)))
-        (unless (and (>= i1 is) (< i1 ie))
+        (unless (and (>= i1 0) (< i1 n1))
           (error "invalid index value"))
-        (let* ((start (* (- i1 is) m1))
+        (let* ((start (* i1 m1))
                (ar2   (make-f2-array 0 1 0 m1)) ; 結果は 1 x m1 になる
                (v2    (slot-ref ar2 'backing-storage)))
           (f64vector-copy! v2 0 v1 start (+ start m1))
@@ -686,21 +710,21 @@
 (define f2-array-row!
   (if *eigenmat-loaded*
     eigen-array-row!
-    (lambda (ar2 ar1 i1)
+    (lambda (ar2 ar1 i1r)
       (check-array-type ar1 ar2)
       (check-array-rank ar1 ar2)
-      (let ((m1 (array-length ar1 1))
-            (is (array-start  ar1 0))
-            (ie (array-end    ar1 0))
+      (let ((n1 (array-length ar1 0))
+            (m1 (array-length ar1 1))
+            (i1 (- i1r (array-start ar1 0)))
             (v1 (slot-ref ar1 'backing-storage))
             (n2 (array-length ar2 0))
             (m2 (array-length ar2 1))
             (v2 (slot-ref ar2 'backing-storage)))
-        (unless (and (>= i1 is) (< i1 ie))
+        (unless (and (>= i1 0) (< i1 n1))
           (error "invalid index value"))
         (unless (and (= n2 1) (= m2 m1))        ; 結果は 1 x m1 になる
           (error "array shape mismatch"))
-        (let1 start (* (- i1 is) m1)
+        (let1 start (* i1 m1)
           (f64vector-copy! v2 0 v1 start (+ start m1))
           ar2)))))
 
@@ -708,21 +732,19 @@
 (define f2-array-col
   (if *eigenmat-loaded*
     eigen-array-col
-    (lambda (ar1 j1)
+    (lambda (ar1 j1r)
       (check-array-type ar1)
       (check-array-rank ar1)
       (let ((n1 (array-length ar1 0))
             (m1 (array-length ar1 1))
-            (js (array-start  ar1 1))
-            (je (array-end    ar1 1))
+            (j1 (- j1r (array-start ar1 1)))
             (v1 (slot-ref ar1 'backing-storage)))
-        (unless (and (>= j1 js) (< j1 je))
+        (unless (and (>= j1 0) (< j1 m1))
           (error "invalid index value"))
-        (let* ((start (- j1 js))
-               (ar2   (make-f2-array 0 n1 0 1)) ; 結果は n1 x 1 になる
-               (v2    (slot-ref ar2 'backing-storage)))
+        (let* ((ar2 (make-f2-array 0 n1 0 1))   ; 結果は n1 x 1 になる
+               (v2  (slot-ref ar2 'backing-storage)))
           (dotimes (i2 n1)
-            (f64vector-set! v2 i2 (f64vector-ref v1 (+ start (* i2 m1)))))
+            (f64vector-set! v2 i2 (f64vector-ref v1 (+ j1 (* i2 m1)))))
           ar2)))))
 
 ;; 行列から列を抜き出す(破壊的変更版)(2次元のみ)
@@ -730,25 +752,140 @@
 (define f2-array-col!
   (if *eigenmat-loaded*
     eigen-array-col!
-    (lambda (ar2 ar1 j1)
+    (lambda (ar2 ar1 j1r)
       (check-array-type ar1 ar2)
       (check-array-rank ar1 ar2)
       (let ((n1 (array-length ar1 0))
             (m1 (array-length ar1 1))
-            (js (array-start  ar1 1))
-            (je (array-end    ar1 1))
+            (j1 (- j1r (array-start ar1 1)))
             (v1 (slot-ref ar1 'backing-storage))
             (n2 (array-length ar2 0))
             (m2 (array-length ar2 1))
             (v2 (slot-ref ar2 'backing-storage)))
-        (unless (and (>= j1 js) (< j1 je))
+        (unless (and (>= j1 0) (< j1 m1))
           (error "invalid index value"))
         (unless (and (= n2 n1) (= m2 1))        ; 結果は n1 x 1 になる
           (error "array shape mismatch"))
-        (let1 start (- j1 js)
-          (dotimes (i2 n1)
-            (f64vector-set! v2 i2 (f64vector-ref v1 (+ start (* i2 m1)))))
+        (dotimes (i2 n1)
+          (f64vector-set! v2 i2 (f64vector-ref v1 (+ j1 (* i2 m1)))))
+        ar2))))
+
+;; 行列から一部を抜き出す(2次元のみ)
+(define f2-array-block
+  (if *eigenmat-loaded*
+    eigen-array-block
+    (lambda (ar1 i1r j1r n2 m2)
+      (check-array-type ar1)
+      (check-array-rank ar1)
+      (let ((n1 (array-length ar1 0))
+            (m1 (array-length ar1 1))
+            (i1 (- i1r (array-start ar1 0)))
+            (j1 (- j1r (array-start ar1 1)))
+            (v1 (slot-ref ar1 'backing-storage)))
+        (unless (and (>= n2 0) (>= m2 0))
+          (error "invalid block size"))
+        (unless (and (>= i1 0) (>= j1 0) (<= (+ i1 n2) n1) (<= (+ j1 m2) m1))
+          (error "invalid block range"))
+        (let* ((ar2 (make-f2-array 0 n2 0 m2))  ; 結果は n2 x m2 になる
+               (v2  (slot-ref ar2 'backing-storage)))
+          (dotimes (i2 n2)
+            (let1 start (+ (* (+ i1 i2) m1) j1)
+              (f64vector-copy! v2 (* i2 m2) v1 start (+ start m2))))
           ar2)))))
+
+;; 行列から一部を抜き出す(破壊的変更版)(2次元のみ)
+;; (第1引数は結果を格納するためだけに使用)
+(define f2-array-block!
+  (if *eigenmat-loaded*
+    eigen-array-block!
+    (lambda (ar2 ar1 i1r j1r n2 m2)
+      (check-array-type ar1 ar2)
+      (check-array-rank ar1 ar2)
+      (let ((n1  (array-length ar1 0))
+            (m1  (array-length ar1 1))
+            (i1  (- i1r (array-start ar1 0)))
+            (j1  (- j1r (array-start ar1 1)))
+            (v1  (slot-ref ar1 'backing-storage))
+            (n2a (array-length ar2 0))
+            (m2a (array-length ar2 1))
+            (v2  (slot-ref ar2 'backing-storage)))
+        (unless (and (>= n2 0) (>= m2 0))
+          (error "invalid block size"))
+        (unless (and (>= i1 0) (>= j1 0) (<= (+ i1 n2) n1) (<= (+ j1 m2) m1))
+          (error "invalid block range"))
+        (unless (and (= n2a n2) (= m2a m2))     ; 結果は n2 x m2 になる
+          (error "array shape mismatch"))
+        (dotimes (i2 n2)
+          (let1 start (+ (* (+ i1 i2) m1) j1)
+            (f64vector-copy! v2 (* i2 m2) v1 start (+ start m2))))
+        ar2))))
+
+;; 行列から一部を抜き出してコピー(2次元のみ)
+(define f2-array-block-copy
+  (if *eigenmat-loaded*
+    eigen-array-block-copy
+    (lambda (ar1 i1r j1r n3 m3 ar2 i2r j2r)
+      (check-array-type ar1 ar2)
+      (check-array-rank ar1 ar2)
+      (let ((n1 (array-length ar1 0))
+            (m1 (array-length ar1 1))
+            (i1 (- i1r (array-start ar1 0)))
+            (j1 (- j1r (array-start ar1 1)))
+            (v1 (slot-ref ar1 'backing-storage))
+            (n2 (array-length ar2 0))
+            (m2 (array-length ar2 1))
+            (i2 (- i2r (array-start ar2 0)))
+            (j2 (- j2r (array-start ar2 1)))
+            (v2 (slot-ref ar2 'backing-storage)))
+        (unless (and (>= n3 0) (>= m3 0))
+          (error "invalid block size"))
+        (unless (and (>= i1 0) (>= j1 0) (<= (+ i1 n3) n1) (<= (+ j1 m3) m1))
+          (error "invalid block range for copy-from"))
+        (unless (and (>= i2 0) (>= j2 0) (<= (+ i2 n3) n2) (<= (+ j2 m3) m2))
+          (error "invalid block range for copy-to"))
+        (let* ((ar3 (f2-array-copy ar2))        ; 結果は n2 x m2 になる
+               (v3  (slot-ref ar3 'backing-storage)))
+          (dotimes (i3 n3)
+            (let ((start1 (+ (* (+ i1 i3) m1) j1))
+                  (start3 (+ (* (+ i2 i3) m2) j2)))
+              (f64vector-copy! v3 start3 v1 start1 (+ start1 m3))))
+          ar3)))))
+
+;; 行列から一部を抜き出してコピー(破壊的変更版)(2次元のみ)
+;; (第1引数は結果を格納するためだけに使用)
+(define f2-array-block-copy!
+  (if *eigenmat-loaded*
+    eigen-array-block-copy!
+    (lambda (ar3 ar1 i1r j1r n3 m3 ar2 i2r j2r)
+      (check-array-type ar1 ar2 ar3)
+      (check-array-rank ar1 ar2 ar3)
+      (let ((n1  (array-length ar1 0))
+            (m1  (array-length ar1 1))
+            (i1  (- i1r (array-start ar1 0)))
+            (j1  (- j1r (array-start ar1 1)))
+            (v1  (slot-ref ar1 'backing-storage))
+            (n2  (array-length ar2 0))
+            (m2  (array-length ar2 1))
+            (i2  (- i2r (array-start ar2 0)))
+            (j2  (- j2r (array-start ar2 1)))
+            (v2  (slot-ref ar2 'backing-storage))
+            (n3a (array-length ar3 0))
+            (m3a (array-length ar3 1))
+            (v3  (slot-ref ar3 'backing-storage)))
+        (unless (and (>= n3 0) (>= m3 0))
+          (error "invalid block size"))
+        (unless (and (>= i1 0) (>= j1 0) (<= (+ i1 n3) n1) (<= (+ j1 m3) m1))
+          (error "invalid block range for copy-from"))
+        (unless (and (>= i2 0) (>= j2 0) (<= (+ i2 n3) n2) (<= (+ j2 m3) m2))
+          (error "invalid block range for copy-to"))
+        (unless (and (= n3a n2) (= m3a m2))     ; 結果は n2 x m2 になる
+          (error "array shape mismatch"))
+        (f2-array-copy! ar3 ar2)
+        (dotimes (i3 n3)
+          (let ((start1 (+ (* (+ i1 i3) m1) j1))
+                (start3 (+ (* (+ i2 i3) m2) j2)))
+            (f64vector-copy! v3 start3 v1 start1 (+ start1 m3))))
+        ar3))))
 
 
 ;; == 以下では、blasmat モジュールがあれば使用する ==
