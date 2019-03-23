@@ -270,6 +270,7 @@
   f2-array-inverseを追加
 - 2019-3-23  v1.04 f2-array-solve,f2-array-block,f2-array-block!,  
   f2-array-block-copy,f2-array-block-copy!を追加
+- 2019-3-23  v1.05 プログラムの整理等
 
 
 (2019-3-23)

@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-23 v1.04
+;; 2019-3-23 v1.05
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -68,7 +68,7 @@
 
 ;; blasmat モジュールのロード
 ;; (存在しなければ使用しない)
-;(define *disable-blasmat* #t) ; 無効化フラグ
+;(define *disable-blasmat* #t)  ; 無効化フラグ
 (define *blasmat-loaded*
   (and (not (global-variable-ref (current-module) '*disable-blasmat* #f))
        (load "blasmat" :error-if-not-found #f)))
@@ -93,7 +93,7 @@
 (define (f2-array-cache-off)
   (set! use-f2-array-cache #f))
 
-;; shape の内部処理の高速化
+;; gauche.array の shape の内部処理を上書き(高速化)
 (select-module gauche.array)
 (define (shape->start/end-vector shape)
   (let* ([rank (array-end shape 0)]
@@ -144,27 +144,24 @@
 
 ;; 行列の要素の参照(2次元のみ)
 (define (f2-array-ref A i j)
-  (let ((is (array-start A 0))
-        (ie (array-end   A 0))
-        (js (array-start A 1))
-        (je (array-end   A 1)))
-    (unless (and (<= is i) (< i ie) (<= js j) (< j je))
+  (let ((n1 (array-length A 0))
+        (m1 (array-length A 1))
+        (i1 (- i (array-start A 0)))
+        (j1 (- j (array-start A 1))))
+    (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
       (error "invalid index value"))
-    (f64vector-ref (slot-ref A 'backing-storage)
-                   (+ (* (- i is) (- je js)) (- j js)))))
+    (f64vector-ref  (slot-ref A 'backing-storage) (+ (* i1 m1) j1))))
 
 ;; 行列の要素の設定(2次元のみ)
 ;; (戻り値は未定義)
 (define (f2-array-set! A i j d)
-  (let ((is (array-start A 0))
-        (ie (array-end   A 0))
-        (js (array-start A 1))
-        (je (array-end   A 1)))
-    (unless (and (<= is i) (< i ie) (<= js j) (< j je))
+  (let ((n1 (array-length A 0))
+        (m1 (array-length A 1))
+        (i1 (- i (array-start A 0)))
+        (j1 (- j (array-start A 1))))
+    (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
       (error "invalid index value"))
-    (f64vector-set! (slot-ref A 'backing-storage)
-                    (+ (* (- i is) (- je js)) (- j js))
-                    d)))
+    (f64vector-set! (slot-ref A 'backing-storage) (+ (* i1 m1) j1) d)))
 
 ;; 行列の要素の埋めつくし(エラーチェックなし)
 ;; (戻り値は未定義)
@@ -215,11 +212,11 @@
 (define f2-array-copy! array-copy!)
 
 ;; f64array 用の array-map (ただし shape の明示指定は不可)
-(define (f2-array-map proc ar0 . rest)
-  (rlet1 ar (if (eq? (class-of ar0) <f64array>)
-              (array-copy ar0)
-              (make-f64array (array-shape ar0)))
-    (apply array-map! ar proc ar0 rest)))
+(define (f2-array-map proc ar1 . rest)
+  (rlet1 ar (if (eq? (class-of ar1) <f64array>)
+              (array-copy ar1)
+              (make-f64array (array-shape ar1)))
+    (apply array-map! ar proc ar1 rest)))
 
 ;; f64array 用の array-map! (エラーチェックなし)
 ;; (戻り値は未定義)
@@ -266,7 +263,7 @@
 (define eigen-array      (with-module f2arrmat f2-array))
 (select-module f2arrmat)
 
-;; 行列の生成(内部処理用)(キャッシュ使用)
+;; gauche.array の行列の生成の内部処理を上書き(キャッシュ使用のため)
 (select-module gauche.array)
 (define (%make-array-internal-sub class shape . maybe-init)
   (receive (Vb Ve) (shape->start/end-vector shape)
@@ -291,7 +288,7 @@
     (apply %make-array-internal-sub class shape maybe-init)))
 (select-module f2arrmat)
 
-;; 転置行列の生成(Gauche v0.9.7 の不具合対応(resの生成) + 高速化)
+;; 転置行列の生成(Gauche v0.9.7 の不具合対応(resの生成のところ) + 高速化)
 (define (%array-transpose a :optional (dim1 0) (dim2 1))
   (let* ([sh (array-copy (array-shape a))]
          [rank (array-rank a)]
@@ -359,15 +356,15 @@
 ;; 行列の和を計算
 (define f2-array-add-elements
   (if *eigenmat-loaded*
-    (lambda (ar . rest) (fold-left eigen-array-add ar rest))
+    (lambda (ar1 . rest) (fold-left eigen-array-add ar1 rest))
     array-add-elements))
 
 ;; 行列の和を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-add-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar0 ar1 . rest)
-      (eigen-array-add! ar ar0 ar1)
+    (lambda (ar ar1 ar2 . rest)
+      (eigen-array-add! ar ar1 ar2)
       (for-each (lambda (arX) (eigen-array-add! ar ar arX)) rest)
       ar)
     (lambda (ar . rest)
@@ -377,15 +374,15 @@
 ;; 行列の差を計算
 (define f2-array-sub-elements
   (if *eigenmat-loaded*
-    (lambda (ar . rest) (fold-left eigen-array-sub ar rest))
+    (lambda (ar1 . rest) (fold-left eigen-array-sub ar1 rest))
     array-sub-elements))
 
 ;; 行列の差を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-sub-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar0 ar1 . rest)
-      (eigen-array-sub! ar ar0 ar1)
+    (lambda (ar ar1 ar2 . rest)
+      (eigen-array-sub! ar ar1 ar2)
       (for-each (lambda (arX) (eigen-array-sub! ar ar arX)) rest)
       ar)
     (lambda (ar . rest)
@@ -396,10 +393,10 @@
 (define f2-array-mul
   (cond
    (*blasmat-loaded*
-    (lambda (ar0 ar1)
-      (let1 ar (make-f2-array 0 (array-length ar0 0)
-                              0 (array-length ar1 1) 0)
-        (blas-array-dgemm! ar0 ar1 ar 1.0 1.0 #f #f))))
+    (lambda (ar1 ar2)
+      (let1 ar (make-f2-array 0 (array-length ar1 0)
+                              0 (array-length ar2 1) 0)
+        (blas-array-dgemm! ar1 ar2 ar 1.0 1.0 #f #f))))
    (*eigenmat-loaded*
     eigen-array-mul)
    (else
@@ -410,28 +407,28 @@
 (define f2-array-mul!
   (cond
    (*blasmat-loaded*
-    (lambda (ar ar0 ar1)
+    (lambda (ar ar1 ar2)
       (f64vector-fill! (slot-ref ar 'backing-storage) 0)
-      (blas-array-dgemm! ar0 ar1 ar 1.0 1.0 #f #f)))
+      (blas-array-dgemm! ar1 ar2 ar 1.0 1.0 #f #f)))
    (*eigenmat-loaded*
     eigen-array-mul!)
    (else
-    (lambda (ar ar0 ar1)
-      (f2-array-copy! ar (array-mul ar0 ar1))
+    (lambda (ar ar1 ar2)
+      (f2-array-copy! ar (array-mul ar1 ar2))
       ar))))
 
 ;; 行列の要素の積を計算
 (define f2-array-mul-elements
   (if *eigenmat-loaded*
-    (lambda (ar . rest) (fold-left eigen-array-mul-elements ar rest))
+    (lambda (ar1 . rest) (fold-left eigen-array-mul-elements ar1 rest))
     array-mul-elements))
 
 ;; 行列の要素の積を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-mul-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar0 ar1 . rest)
-      (eigen-array-mul-elements! ar ar0 ar1)
+    (lambda (ar ar1 ar2 . rest)
+      (eigen-array-mul-elements! ar ar1 ar2)
       (for-each (lambda (arX) (eigen-array-mul-elements! ar ar arX)) rest)
       ar)
     (lambda (ar . rest)
@@ -441,15 +438,15 @@
 ;; 行列の要素の割り算を計算
 (define f2-array-div-elements
   (if *eigenmat-loaded*
-    (lambda (ar . rest) (fold-left eigen-array-div ar rest))
+    (lambda (ar1 . rest) (fold-left eigen-array-div ar1 rest))
     array-div-elements))
 
 ;; 行列の要素の割り算を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-div-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar0 ar1 . rest)
-      (eigen-array-div! ar ar0 ar1)
+    (lambda (ar ar1 ar2 . rest)
+      (eigen-array-div! ar ar1 ar2)
       (for-each (lambda (arX) (eigen-array-div! ar ar arX)) rest)
       ar)
     (lambda (ar . rest)
@@ -460,8 +457,8 @@
 (define f2-array-pow
   (if *eigenmat-loaded*
     eigen-array-pow
-    (lambda (ar r)
-      (f2-array-map (lambda (x1) (%expt x1 r)) ar))))
+    (lambda (ar1 r)
+      (f2-array-map (lambda (x1) (%expt x1 r)) ar1))))
 
 ;; 行列の要素のべき乗を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -476,8 +473,8 @@
 (define f2-array-exp
   (if *eigenmat-loaded*
     eigen-array-exp
-    (lambda (ar)
-      (f2-array-map (lambda (x1) (%exp x1)) ar))))
+    (lambda (ar1)
+      (f2-array-map (lambda (x1) (%exp x1)) ar1))))
 
 ;; 行列の要素を指数として、自然対数の底eのべき乗を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -492,8 +489,8 @@
 (define f2-array-log
   (if *eigenmat-loaded*
     eigen-array-log
-    (lambda (ar)
-      (f2-array-map (lambda (x1) (%log x1)) ar))))
+    (lambda (ar1)
+      (f2-array-map (lambda (x1) (%log x1)) ar1))))
 
 ;; 行列の要素に対して、自然対数を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -508,10 +505,10 @@
 (define f2-array-sigmoid
   (if *eigenmat-loaded*
     eigen-array-sigmoid
-    (lambda (ar)
+    (lambda (ar1)
       (f2-array-map
        (lambda (x1) (/. 1 (+ 1 (%exp (- x1))))) ; シグモイド関数
-       ar))))
+       ar1))))
 
 ;; 行列の要素に対して、シグモイド関数を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -529,10 +526,10 @@
 (define f2-array-relu
   (if *eigenmat-loaded*
     eigen-array-relu
-    (lambda (ar)
+    (lambda (ar1)
       (f2-array-map
        (lambda (x1) (max 0 x1)) ; ReLU関数
-       ar))))
+       ar1))))
 
 ;; 行列の要素に対して、ReLU関数を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -550,10 +547,10 @@
 (define f2-array-step
   (if *eigenmat-loaded*
     eigen-array-step
-    (lambda (ar)
+    (lambda (ar1)
       (f2-array-map
        (lambda (x1) (if (> x1 0) 1 0)) ; ステップ関数
-       ar))))
+       ar1))))
 
 ;; 行列の要素に対して、ステップ関数を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
@@ -571,42 +568,42 @@
 (define f2-array-sum
   (if *eigenmat-loaded*
     eigen-array-sum
-    (lambda (ar) (fold + 0 (slot-ref ar 'backing-storage)))))
+    (lambda (ar1) (fold + 0 (slot-ref ar1 'backing-storage)))))
 
 ;; 行列の要素の最小値を計算
 (define f2-array-min
   (if *eigenmat-loaded*
     eigen-array-min
-    (lambda (ar)
-      (let1 v1 (slot-ref ar 'backing-storage)
+    (lambda (ar1)
+      (let1 v1 (slot-ref ar1 'backing-storage)
         (fold min (f64vector-ref v1 0) v1)))))
 
 ;; 行列の要素の最大値を計算
 (define f2-array-max
   (if *eigenmat-loaded*
     eigen-array-max
-    (lambda (ar)
-      (let1 v1 (slot-ref ar 'backing-storage)
+    (lambda (ar1)
+      (let1 v1 (slot-ref ar1 'backing-storage)
         (fold max (f64vector-ref v1 0) v1)))))
 
 ;; 行列の要素の平均値を計算
 (define f2-array-mean
   (if *eigenmat-loaded*
     eigen-array-mean
-    (lambda (ar)
-      (let1 v1 (slot-ref ar 'backing-storage)
+    (lambda (ar1)
+      (let1 v1 (slot-ref ar1 'backing-storage)
         (/. (fold + 0 v1) (f64vector-length v1))))))
 
 ;; 行列のトレースを計算
 (define f2-array-trace
   (if *eigenmat-loaded*
     eigen-array-trace
-    (lambda (ar)
-      (check-array-type ar)
-      (check-array-rank ar)
-      (let ((n1  (array-length ar 0))
-            (m1  (array-length ar 1))
-            (v1  (slot-ref ar 'backing-storage))
+    (lambda (ar1)
+      (check-array-type ar1)
+      (check-array-rank ar1)
+      (let ((n1  (array-length ar1 0))
+            (m1  (array-length ar1 1))
+            (v1  (slot-ref ar1 'backing-storage))
             (ret 0))
         (let loop ((i1 0))
           (inc! ret (f64vector-ref v1 (+ (* i1 m1) i1)))
