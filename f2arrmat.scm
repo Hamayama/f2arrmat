@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-23 v1.05
+;; 2019-3-24 v1.06
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -142,7 +142,7 @@
      (unless (= (array-rank A) (array-rank B) ... 2)
        (error "array rank must be 2")))))
 
-;; 行列の要素の参照(2次元のみ)
+;; 行列の要素の参照(2次元のみ)(タイプと次元数のエラーチェックなし)
 (define (f2-array-ref A i j)
   (let ((n1 (array-length A 0))
         (m1 (array-length A 1))
@@ -152,7 +152,7 @@
       (error "invalid index value"))
     (f64vector-ref  (slot-ref A 'backing-storage) (+ (* i1 m1) j1))))
 
-;; 行列の要素の設定(2次元のみ)
+;; 行列の要素の設定(2次元のみ)(タイプと次元数のエラーチェックなし)
 ;; (戻り値は未定義)
 (define (f2-array-set! A i j d)
   (let ((n1 (array-length A 0))
@@ -211,7 +211,7 @@
 ;; (戻り値は未定義)
 (define f2-array-copy! array-copy!)
 
-;; f64array 用の array-map (ただし shape の明示指定は不可)
+;; f64array 用の array-map (ただし shape の明示指定は不可)(エラーチェックなし)
 (define (f2-array-map proc ar1 . rest)
   (rlet1 ar (if (eq? (class-of ar1) <f64array>)
               (array-copy ar1)
@@ -231,14 +231,14 @@
           (array-copy A)
           (rlet1 B (array-copy A)
             (f64vector-fill! (slot-ref B 'backing-storage) (car maybe-init))))
-        (let1 B ((with-module gauche.array %make-array-internal-sub)
+        (let1 B ((with-module gauche.array %make-array-internal-orig)
                  <f64array> (shape ns ne ms me) 0)
           (hash-table-put! f2-array-cache-table key B)
           (if (or (null? maybe-init) (= (car maybe-init) 0))
             (array-copy B)
             (rlet1 C (array-copy B)
               (f64vector-fill! (slot-ref C 'backing-storage) (car maybe-init)))))))
-    (apply (with-module gauche.array %make-array-internal-sub)
+    (apply (with-module gauche.array %make-array-internal-orig)
            <f64array> (shape ns ne ms me) maybe-init)))
 
 ;; 同じ shape の行列の生成(2次元のみ)
@@ -265,7 +265,7 @@
 
 ;; gauche.array の行列の生成の内部処理を上書き(キャッシュ使用のため)
 (select-module gauche.array)
-(define (%make-array-internal-sub class shape . maybe-init)
+(define (%make-array-internal-orig class shape . maybe-init)
   (receive (Vb Ve) (shape->start/end-vector shape)
     (make class
       :start-vector Vb
@@ -277,15 +277,14 @@
 (define (make-array-internal class shape . maybe-init)
   (if (and (with-module f2arrmat use-f2-array-cache)
            (eq? class <f64array>)
-           (equal? (slot-ref shape 'end-vector) #s32(2 2))) ; rank 2
+           (equal? (slot-ref shape 'end-vector) #s32(2 2))) ; rank 2 only
     (receive (Vb Ve) (shape->start/end-vector shape)
       (let ((ns (s32vector-ref Vb 0))
             (ne (s32vector-ref Ve 0))
             (ms (s32vector-ref Vb 1))
             (me (s32vector-ref Ve 1)))
-        (apply (with-module f2arrmat make-f2-array)
-               ns ne ms me maybe-init)))
-    (apply %make-array-internal-sub class shape maybe-init)))
+        (apply (with-module f2arrmat make-f2-array) ns ne ms me maybe-init)))
+    (apply %make-array-internal-orig class shape maybe-init)))
 (select-module f2arrmat)
 
 ;; 転置行列の生成(Gauche v0.9.7 の不具合対応(resの生成のところ) + 高速化)
@@ -528,7 +527,7 @@
     eigen-array-relu
     (lambda (ar1)
       (f2-array-map
-       (lambda (x1) (max 0 x1)) ; ReLU関数
+       (lambda (x1) (if (> x1 0) x1 0)) ; ReLU関数
        ar1))))
 
 ;; 行列の要素に対して、ReLU関数を計算(破壊的変更版)
@@ -539,7 +538,7 @@
     (lambda (ar2 ar1)
       (f2-array-map!
        ar2
-       (lambda (x1) (max 0 x1)) ; ReLU関数
+       (lambda (x1) (if (> x1 0) x1 0)) ; ReLU関数
        ar1)
       ar2)))
 
@@ -568,31 +567,41 @@
 (define f2-array-sum
   (if *eigenmat-loaded*
     eigen-array-sum
-    (lambda (ar1) (fold + 0 (slot-ref ar1 'backing-storage)))))
+    (lambda (ar1)
+      (let ((v1  (slot-ref ar1 'backing-storage))
+            (ret 0))
+        (for-each (lambda (x1) (inc! ret x1)) v1)
+        ret))))
 
 ;; 行列の要素の最小値を計算
 (define f2-array-min
   (if *eigenmat-loaded*
     eigen-array-min
     (lambda (ar1)
-      (let1 v1 (slot-ref ar1 'backing-storage)
-        (fold min (f64vector-ref v1 0) v1)))))
+      (let* ((v1  (slot-ref ar1 'backing-storage))
+             (ret (f64vector-ref v1 0)))
+        (for-each (lambda (x1) (if (< x1 ret) (set! ret x1))) v1)
+        ret))))
 
 ;; 行列の要素の最大値を計算
 (define f2-array-max
   (if *eigenmat-loaded*
     eigen-array-max
     (lambda (ar1)
-      (let1 v1 (slot-ref ar1 'backing-storage)
-        (fold max (f64vector-ref v1 0) v1)))))
+      (let* ((v1  (slot-ref ar1 'backing-storage))
+             (ret (f64vector-ref v1 0)))
+        (for-each (lambda (x1) (if (> x1 ret) (set! ret x1))) v1)
+        ret))))
 
 ;; 行列の要素の平均値を計算
 (define f2-array-mean
   (if *eigenmat-loaded*
     eigen-array-mean
     (lambda (ar1)
-      (let1 v1 (slot-ref ar1 'backing-storage)
-        (/. (fold + 0 v1) (f64vector-length v1))))))
+      (let ((v1  (slot-ref ar1 'backing-storage))
+            (ret 0))
+        (for-each (lambda (x1) (inc! ret x1)) v1)
+        (/. ret (f64vector-length v1))))))
 
 ;; 行列のトレースを計算
 (define f2-array-trace

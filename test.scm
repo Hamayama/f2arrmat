@@ -71,11 +71,14 @@
            (begin (f2-array-copy! A1 A) A1) f2-array-nearly=?)
     )
 
-  (test* "f2-array-map 1"  B
+  (test* "f2-array-map 1" B
          (f2-array-map (lambda (d1) (+ d1 4)) A) f2-array-nearly=?)
+  (test* "f2-array-map 2" L
+         (f2-array-map (lambda (d1) (- d1 1))
+                       (array (shape 0 2 0 3) -1 0 1 2 3 4)) f2-array-nearly=?)
 
   (let1 A1 (make-f2-array 0 2 0 2)
-    (test* "f2-array-map! 1"  B
+    (test* "f2-array-map! 1" B
            (begin (f2-array-map! A1 (lambda (d1) (+ d1 4)) A) A1) f2-array-nearly=?)
     )
 
@@ -110,15 +113,23 @@
 
     (test* "f2-array-add-elements  1" #,(<f64array> (0 2 0 2) 3 6 9 12)
            (f2-array-add-elements  A A A) f2-array-nearly=?)
+    (test* "f2-array-add-elements  2" #,(<f64array> (0 2 0 2) 4 5 6 7)
+           (f2-array-add-elements  A 1 2) f2-array-nearly=?)
 
     (test* "f2-array-add-elements! 1" #,(<f64array> (0 2 0 2) 3 6 9 12)
            (begin (f2-array-add-elements! A1 A A A) A1) f2-array-nearly=?)
+    (test* "f2-array-add-elements! 2" #,(<f64array> (0 2 0 2) 4 5 6 7)
+           (begin (f2-array-add-elements! A1 A 1 2) A1) f2-array-nearly=?)
 
     (test* "f2-array-sub-elements  1" #,(<f64array> (0 2 0 2) -1 -2 -3 -4)
            (f2-array-sub-elements  A A A) f2-array-nearly=?)
+    (test* "f2-array-sub-elements  2" #,(<f64array> (0 2 0 2) -2 -1  0  1)
+           (f2-array-sub-elements  A 1 2) f2-array-nearly=?)
 
     (test* "f2-array-sub-elements! 1" #,(<f64array> (0 2 0 2) -1 -2 -3 -4)
            (begin (f2-array-sub-elements! A1 A A A) A1) f2-array-nearly=?)
+    (test* "f2-array-sub-elements! 2" #,(<f64array> (0 2 0 2) -2 -1  0  1)
+           (begin (f2-array-sub-elements! A1 A 1 2) A1) f2-array-nearly=?)
 
     (test* "f2-array-mul  1" #,(<f64array> (0 2 0 2) 7 10 15 22)
            (f2-array-mul  A A) f2-array-nearly=?)
@@ -128,15 +139,23 @@
 
     (test* "f2-array-mul-elements  1" #,(<f64array> (0 2 0 2) 1 8 27 64)
            (f2-array-mul-elements  A A A) f2-array-nearly=?)
+    (test* "f2-array-mul-elements  2" #,(<f64array> (0 2 0 2) 2 4 6 8)
+           (f2-array-mul-elements  A 1 2) f2-array-nearly=?)
 
     (test* "f2-array-mul-elements! 1" #,(<f64array> (0 2 0 2) 1 8 27 64)
            (begin (f2-array-mul-elements! A1 A A A) A1) f2-array-nearly=?)
+    (test* "f2-array-mul-elements! 2" #,(<f64array> (0 2 0 2) 2 4 6 8)
+           (begin (f2-array-mul-elements! A1 A 1 2) A1) f2-array-nearly=?)
 
     (test* "f2-array-div-elements  1" #,(<f64array> (0 2 0 2) 1/1 1/2 1/3 1/4)
            (f2-array-div-elements  A A A) f2-array-nearly=?)
+    (test* "f2-array-div-elements  2" #,(<f64array> (0 2 0 2) 1/2 2/2 3/2 4/2)
+           (f2-array-div-elements  A 1 2) f2-array-nearly=?)
 
     (test* "f2-array-div-elements! 1" #,(<f64array> (0 2 0 2) 1/1 1/2 1/3 1/4)
            (begin (f2-array-div-elements! A1 A A A) A1) f2-array-nearly=?)
+    (test* "f2-array-div-elements! 2" #,(<f64array> (0 2 0 2) 1/2 2/2 3/2 4/2)
+           (begin (f2-array-div-elements! A1 A 1 2) A1) f2-array-nearly=?)
 
     (test* "f2-array-pow  1" #,(<f64array> (0 2 0 2) 25 36 49 64)
            (f2-array-pow  B 2) f2-array-nearly=?)
@@ -195,10 +214,14 @@
   (test* "f2-array-determinant 2" (test-error <error>)
          (f2-array-determinant K))
 
-  (test* "f2-array-transpose  1" #,(<f64array> (0 3 0 2) -2 1 -1 2 0 3)
+  (test* "f2-array-transpose  1" #,(<f64array> (0 2 0 2) 1 3 2 4)
+         (f2-array-transpose  A) f2-array-nearly=?)
+  (test* "f2-array-transpose  2" #,(<f64array> (0 3 0 2) -2 1 -1 2 0 3)
          (f2-array-transpose  L) f2-array-nearly=?)
 
-  (test* "f2-array-transpose! 1" #,(<f64array> (0 3 0 2) -2 1 -1 2 0 3)
+  (test* "f2-array-transpose! 1" #,(<f64array> (0 2 0 2) 1 3 2 4)
+         (f2-array-transpose! (make-f2-array 0 2 0 2) A) f2-array-nearly=?)
+  (test* "f2-array-transpose! 2" #,(<f64array> (0 3 0 2) -2 1 -1 2 0 3)
          (f2-array-transpose! (make-f2-array 0 3 0 2) L) f2-array-nearly=?)
 
   (test* "f2-array-inverse  1" #,(<f64array> (0 2 0 2) -2 1 1.5 -0.5)
@@ -255,14 +278,20 @@
                                                           0.9 10  11  12  1.3 14  15  16)
          (f2-array-block-copy! (make-f2-array 0 4 0 4) H 2 1 2 3 J 2 1) f2-array-nearly=?)
 
-  (let1 B1 (f2-array-copy B)
+  (let ((B1 (f2-array-copy B))
+        (K1 (f2-array-copy K)))
     (test* "f2-array-ra+b! 1" #,(<f64array> (0 2 0 2) 7 10 13 16)
            (f2-array-ra+b! 2.0 A B1) f2-array-nearly=?)
+    (test* "f2-array-ra+b! 2" #,(<f64array> (0 2 0 3) 0.0 1.5 3.0 4.5 6.0 7.5)
+           (f2-array-ra+b! 0.5 L K1) f2-array-nearly=?)
     )
 
-  (let1 D1 (f2-array-copy D)
+  (let ((D1 (f2-array-copy D))
+        (D2 (f2-array-copy D)))
     (test* "f2-array-ab+c! 1" #,(<f64array> (0 2 0 2) 20 23 44 51)
            (f2-array-ab+c! A B D1 1.0 1.0 #f #f) f2-array-nearly=?)
+    (test* "f2-array-ab+c! 2" #,(<f64array> (0 2 0 2) 9.0 18.0 18.0 40.5)
+           (f2-array-ab+c! K K D2 0.5 2.0 #f #t) f2-array-nearly=?)
     )
   )
 

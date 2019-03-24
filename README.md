@@ -271,6 +271,7 @@
 - 2019-3-23  v1.04 f2-array-solve,f2-array-block,f2-array-block!,  
   f2-array-block-copy,f2-array-block-copy!を追加
 - 2019-3-23  v1.05 プログラムの整理等
+- 2019-3-24  v1.06 プログラムの整理等
 
 
-(2019-3-23)
+(2019-3-24)
