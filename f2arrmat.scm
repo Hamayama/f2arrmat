@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-27 v1.07
+;; 2019-3-28 v1.08
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -15,6 +15,7 @@
   (use gauche.sequence)
   (use gauche.uvector)
   (use gauche.array)
+  (use gauche.version)
   (use math.const)
   ;(use eigenmat)
   (define-module eigenmat)
