@@ -102,15 +102,15 @@
     (precision の定義については、Eigen ライブラリ の isMuchSmallerThan メソッドの説明を参照してください)  
     precision は省略可能です。省略した場合は 1e-12 を指定したことになります。
 
-  - `(f2-array-add-elements A B1/r1 ...)`  
-    `(f2-array-add-elements! C A B1/r1 ...)`  
-    行列A, 行列B1/実数r1, ... の和を計算して返します。  
+  - `(f2-array-add-elements A B/r ...)`  
+    `(f2-array-add-elements! C A B/r ...)`  
+    行列A, 行列B/実数r, ... の和を計算して返します。  
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
-  - `(f2-array-sub-elements A B1/r1 ...)`  
-    `(f2-array-sub-elements! C A B1/r1 ...)`  
-    行列A, 行列B1/実数r1, ... の差を計算して返します。  
+  - `(f2-array-sub-elements A B/r ...)`  
+    `(f2-array-sub-elements! C A B/r ...)`  
+    行列A, 行列B/実数r, ... の差を計算して返します。  
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
@@ -120,15 +120,15 @@
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
-  - `(f2-array-mul-elements A B1/r1 ...)`  
-    `(f2-array-mul-elements! C A B1/r1 ...)`  
-    行列A, 行列B1/実数r1, ... の要素の積を計算して返します。  
+  - `(f2-array-mul-elements A B/r ...)`  
+    `(f2-array-mul-elements! C A B/r ...)`  
+    行列A, 行列B/実数r, ... の要素の積を計算して返します。  
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
-  - `(f2-array-div-elements A B1/r1 ...)`  
-    `(f2-array-div-elements! C A B1/r1 ...)`  
-    行列A, 行列B1/実数r1, ... の要素の割り算を計算して返します。  
+  - `(f2-array-div-elements A B/r ...)`  
+    `(f2-array-div-elements! C A B/r ...)`  
+    行列A, 行列B/実数r, ... の要素の割り算を計算して返します。  
     `!` がついたものは、結果を 行列C に格納して返します (行列C は変更されます)。  
     (行列C は計算の対象にはなりません。結果を格納するためだけに使用されます)
 
