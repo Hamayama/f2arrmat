@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-24 v1.06
+;; 2019-3-27 v1.07
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -355,37 +355,49 @@
 ;; 行列の和を計算
 (define f2-array-add-elements
   (if *eigenmat-loaded*
-    (lambda (ar1 . rest) (fold-left eigen-array-add ar1 rest))
+    (lambda (ar1 . rest)
+      (rlet1 ar (f2-array-copy ar1)
+        (for-each (lambda (arX) (eigen-array-add! ar ar arX)) rest)))
     array-add-elements))
 
 ;; 行列の和を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-add-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar1 ar2 . rest)
-      (eigen-array-add! ar ar1 ar2)
-      (for-each (lambda (arX) (eigen-array-add! ar ar arX)) rest)
+    (lambda (ar ar1 . rest)
+      (cond
+       ((null? rest)
+        (f2-array-copy! ar ar1))
+       (else
+        (eigen-array-add! ar ar1 (car rest))
+        (for-each (lambda (arX) (eigen-array-add! ar ar arX)) (cdr rest))))
       ar)
-    (lambda (ar . rest)
-      (f2-array-copy! ar (apply array-add-elements rest))
+    (lambda (ar ar1 . rest)
+      (f2-array-copy! ar (apply array-add-elements ar1 rest))
       ar)))
 
 ;; 行列の差を計算
 (define f2-array-sub-elements
   (if *eigenmat-loaded*
-    (lambda (ar1 . rest) (fold-left eigen-array-sub ar1 rest))
+    (lambda (ar1 . rest)
+      (rlet1 ar (f2-array-copy ar1)
+        (for-each (lambda (arX) (eigen-array-sub! ar ar arX)) rest)))
     array-sub-elements))
 
 ;; 行列の差を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-sub-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar1 ar2 . rest)
-      (eigen-array-sub! ar ar1 ar2)
-      (for-each (lambda (arX) (eigen-array-sub! ar ar arX)) rest)
+    (lambda (ar ar1 . rest)
+      (cond
+       ((null? rest)
+        (f2-array-copy! ar ar1))
+       (else
+        (eigen-array-sub! ar ar1 (car rest))
+        (for-each (lambda (arX) (eigen-array-sub! ar ar arX)) (cdr rest))))
       ar)
-    (lambda (ar . rest)
-      (f2-array-copy! ar (apply array-sub-elements rest))
+    (lambda (ar ar1 . rest)
+      (f2-array-copy! ar (apply array-sub-elements ar1 rest))
       ar)))
 
 ;; 行列の積を計算(2次元のみ)
@@ -395,7 +407,7 @@
     (lambda (ar1 ar2)
       (let1 ar (make-f2-array 0 (array-length ar1 0)
                               0 (array-length ar2 1) 0)
-        (blas-array-dgemm! ar1 ar2 ar 1.0 1.0 #f #f))))
+        (blas-array-dgemm! ar1 ar2 ar 1.0 0.0 #f #f))))
    (*eigenmat-loaded*
     eigen-array-mul)
    (else
@@ -407,8 +419,7 @@
   (cond
    (*blasmat-loaded*
     (lambda (ar ar1 ar2)
-      (f64vector-fill! (slot-ref ar 'backing-storage) 0)
-      (blas-array-dgemm! ar1 ar2 ar 1.0 1.0 #f #f)))
+      (blas-array-dgemm! ar1 ar2 ar 1.0 0.0 #f #f)))
    (*eigenmat-loaded*
     eigen-array-mul!)
    (else
@@ -419,37 +430,49 @@
 ;; 行列の要素の積を計算
 (define f2-array-mul-elements
   (if *eigenmat-loaded*
-    (lambda (ar1 . rest) (fold-left eigen-array-mul-elements ar1 rest))
+    (lambda (ar1 . rest)
+      (rlet1 ar (f2-array-copy ar1)
+        (for-each (lambda (arX) (eigen-array-mul-elements! ar ar arX)) rest)))
     array-mul-elements))
 
 ;; 行列の要素の積を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-mul-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar1 ar2 . rest)
-      (eigen-array-mul-elements! ar ar1 ar2)
-      (for-each (lambda (arX) (eigen-array-mul-elements! ar ar arX)) rest)
+    (lambda (ar ar1 . rest)
+      (cond
+       ((null? rest)
+        (f2-array-copy! ar ar1))
+       (else
+        (eigen-array-mul-elements! ar ar1 (car rest))
+        (for-each (lambda (arX) (eigen-array-mul-elements! ar ar arX)) (cdr rest))))
       ar)
-    (lambda (ar . rest)
-      (f2-array-copy! ar (apply array-mul-elements rest))
+    (lambda (ar ar1 . rest)
+      (f2-array-copy! ar (apply array-mul-elements ar1 rest))
       ar)))
 
 ;; 行列の要素の割り算を計算
 (define f2-array-div-elements
   (if *eigenmat-loaded*
-    (lambda (ar1 . rest) (fold-left eigen-array-div ar1 rest))
+    (lambda (ar1 . rest)
+      (rlet1 ar (f2-array-copy ar1)
+        (for-each (lambda (arX) (eigen-array-div! ar ar arX)) rest)))
     array-div-elements))
 
 ;; 行列の要素の割り算を計算(破壊的変更版)
 ;; (第1引数は結果を格納するためだけに使用)
 (define f2-array-div-elements!
   (if *eigenmat-loaded*
-    (lambda (ar ar1 ar2 . rest)
-      (eigen-array-div! ar ar1 ar2)
-      (for-each (lambda (arX) (eigen-array-div! ar ar arX)) rest)
+    (lambda (ar ar1 . rest)
+      (cond
+       ((null? rest)
+        (f2-array-copy! ar ar1))
+       (else
+        (eigen-array-div! ar ar1 (car rest))
+        (for-each (lambda (arX) (eigen-array-div! ar ar arX)) (cdr rest))))
       ar)
-    (lambda (ar . rest)
-      (f2-array-copy! ar (apply array-div-elements rest))
+    (lambda (ar ar1 . rest)
+      (f2-array-copy! ar (apply array-div-elements ar1 rest))
       ar)))
 
 ;; 行列の要素のべき乗を計算
