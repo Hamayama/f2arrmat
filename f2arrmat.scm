@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-3-28 v1.08
+;; 2019-4-7 v1.09
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -224,30 +224,29 @@
 (define f2-array-map! array-map!)
 
 ;; 行列の生成(2次元のみ)(キャッシュ使用)
-(define (make-f2-array ns ne ms me . maybe-init)
+(define (make-f2-array ns ne ms me :optional (maybe-init 0))
   (if use-f2-array-cache
     (let1 key (s32vector ns ne ms me)
       (if-let1 A (hash-table-get f2-array-cache-table key #f)
-        (if (or (null? maybe-init) (= (car maybe-init) 0))
+        (if (= maybe-init 0)
           (array-copy A)
           (rlet1 B (array-copy A)
-            (f64vector-fill! (slot-ref B 'backing-storage) (car maybe-init))))
+            (f64vector-fill! (slot-ref B 'backing-storage) maybe-init)))
         (let1 B ((with-module gauche.array %make-array-internal-orig)
                  <f64array> (shape ns ne ms me) 0)
           (hash-table-put! f2-array-cache-table key B)
-          (if (or (null? maybe-init) (= (car maybe-init) 0))
+          (if (= maybe-init 0)
             (array-copy B)
             (rlet1 C (array-copy B)
-              (f64vector-fill! (slot-ref C 'backing-storage) (car maybe-init)))))))
-    (apply (with-module gauche.array %make-array-internal-orig)
-           <f64array> (shape ns ne ms me) maybe-init)))
+              (f64vector-fill! (slot-ref C 'backing-storage) maybe-init))))))
+    ((with-module gauche.array %make-array-internal-orig)
+     <f64array> (shape ns ne ms me) maybe-init)))
 
 ;; 同じ shape の行列の生成(2次元のみ)
-(define (make-f2-array-same-shape A . maybe-init)
+(define (make-f2-array-same-shape A :optional (maybe-init 0))
   (check-array-rank A)
-  (apply make-f2-array
-         (array-start A 0) (array-end A 0)
-         (array-start A 1) (array-end A 1) maybe-init))
+  (make-f2-array (array-start A 0) (array-end A 0)
+                 (array-start A 1) (array-end A 1) maybe-init))
 
 ;; 行列の初期化データ付き生成(2次元のみ)
 (define (f2-array ns ne ms me . inits)
