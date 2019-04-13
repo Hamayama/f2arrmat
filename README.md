@@ -293,6 +293,7 @@
 - 2019-4-13  v1.10 f2-array-sinh,f2-array-sinh!,  
   f2-array-cosh,f2-array-cosh!,  
   f2-array-tanh,f2-array-tanh!を追加
+- 2019-4-13  v1.11 一部マクロ化
 
 
 (2019-4-13)
