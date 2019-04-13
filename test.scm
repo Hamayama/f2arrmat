@@ -199,6 +199,24 @@
     (test* "f2-array-log! 1" (f2-array 0 2 0 2 (log 5) (log 6) (log 7) (log 8))
            (f2-array-log! A1 B) f2-array-nearly=?)
 
+    (test* "f2-array-sinh  1" (f2-array 0 2 0 2 (sinh 5) (sinh 6) (sinh 7) (sinh 8))
+           (f2-array-sinh  B) f2-array-nearly=?)
+
+    (test* "f2-array-sinh! 1" (f2-array 0 2 0 2 (sinh 5) (sinh 6) (sinh 7) (sinh 8))
+           (f2-array-sinh! A1 B) f2-array-nearly=?)
+
+    (test* "f2-array-cosh  1" (f2-array 0 2 0 2 (cosh 5) (cosh 6) (cosh 7) (cosh 8))
+           (f2-array-cosh  B) f2-array-nearly=?)
+
+    (test* "f2-array-cosh! 1" (f2-array 0 2 0 2 (cosh 5) (cosh 6) (cosh 7) (cosh 8))
+           (f2-array-cosh! A1 B) f2-array-nearly=?)
+
+    (test* "f2-array-tanh  1" (f2-array 0 2 0 2 (tanh 5) (tanh 6) (tanh 7) (tanh 8))
+           (f2-array-tanh  B) f2-array-nearly=?)
+
+    (test* "f2-array-tanh! 1" (f2-array 0 2 0 2 (tanh 5) (tanh 6) (tanh 7) (tanh 8))
+           (f2-array-tanh! A1 B) f2-array-nearly=?)
+
     (test* "f2-array-sigmoid  1" (f2-array
                                   0 2 0 2
                                   (sigmoid 5) (sigmoid 6) (sigmoid 7) (sigmoid 8))

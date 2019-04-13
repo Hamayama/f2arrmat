@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-4-7 v1.09
+;; 2019-4-13 v1.10
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -40,6 +40,9 @@
     f2-array-pow          f2-array-pow!
     f2-array-exp          f2-array-exp!
     f2-array-log          f2-array-log!
+    f2-array-sinh         f2-array-sinh!
+    f2-array-cosh         f2-array-cosh!
+    f2-array-tanh         f2-array-tanh!
     f2-array-sigmoid      f2-array-sigmoid!
     f2-array-relu         f2-array-relu!
     f2-array-step         f2-array-step!
@@ -491,100 +494,54 @@
       (f2-array-map! ar2 (lambda (x1) (%expt x1 r)) ar1)
       ar2)))
 
-;; 行列の要素を指数として、自然対数の底eのべき乗を計算
-(define f2-array-exp
-  (if *eigenmat-loaded*
-    eigen-array-exp
-    (lambda (ar1)
-      (f2-array-map (lambda (x1) (%exp x1)) ar1))))
+;; 行列の要素の演算生成用マクロ
+;; (行列1個の演算)
+(define-macro (define-f2-array-op-unary op1 func1)
+  `(define ,(symbol-append 'f2-array- op1)
+     (if *eigenmat-loaded*
+       ,(symbol-append 'eigen-array- op1)
+       (lambda (ar1)
+         (f2-array-map ,func1 ar1)))))
+;; (行列1個の演算(破壊的変更版))
+(define-macro (define-f2-array-op-unary! op1 func1)
+  `(define ,(symbol-append 'f2-array- op1 '!)
+     (if *eigenmat-loaded*
+       ,(symbol-append 'eigen-array- op1 '!)
+       (lambda (ar2 ar1)
+         (f2-array-map! ar2 ,func1 ar1)
+         ar2))))
 
-;; 行列の要素を指数として、自然対数の底eのべき乗を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
-(define f2-array-exp!
-  (if *eigenmat-loaded*
-    eigen-array-exp!
-    (lambda (ar2 ar1)
-      (f2-array-map! ar2 (lambda (x1) (%exp x1)) ar1)
-      ar2)))
+;; 行列の要素を指数として、自然対数の底eのべき乗を計算
+(define-f2-array-op-unary  exp %exp)
+(define-f2-array-op-unary! exp %exp)
 
 ;; 行列の要素に対して、自然対数を計算
-(define f2-array-log
-  (if *eigenmat-loaded*
-    eigen-array-log
-    (lambda (ar1)
-      (f2-array-map (lambda (x1) (%log x1)) ar1))))
+(define-f2-array-op-unary  log %log)
+(define-f2-array-op-unary! log %log)
 
-;; 行列の要素に対して、自然対数を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
-(define f2-array-log!
-  (if *eigenmat-loaded*
-    eigen-array-log!
-    (lambda (ar2 ar1)
-      (f2-array-map! ar2 (lambda (x1) (%log x1)) ar1)
-      ar2)))
+;; 行列の要素に対して、sinh を計算
+(define-f2-array-op-unary  sinh %sinh)
+(define-f2-array-op-unary! sinh %sinh)
+
+;; 行列の要素に対して、cosh を計算
+(define-f2-array-op-unary  cosh %cosh)
+(define-f2-array-op-unary! cosh %cosh)
+
+;; 行列の要素に対して、tanh を計算
+(define-f2-array-op-unary  tanh %tanh)
+(define-f2-array-op-unary! tanh %tanh)
 
 ;; 行列の要素に対して、シグモイド関数を計算
-(define f2-array-sigmoid
-  (if *eigenmat-loaded*
-    eigen-array-sigmoid
-    (lambda (ar1)
-      (f2-array-map
-       (lambda (x1) (/. 1 (+ 1 (%exp (- x1))))) ; シグモイド関数
-       ar1))))
-
-;; 行列の要素に対して、シグモイド関数を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
-(define f2-array-sigmoid!
-  (if *eigenmat-loaded*
-    eigen-array-sigmoid!
-    (lambda (ar2 ar1)
-      (f2-array-map!
-       ar2
-       (lambda (x1) (/. 1 (+ 1 (%exp (- x1))))) ; シグモイド関数
-       ar1)
-      ar2)))
+(define-f2-array-op-unary  sigmoid (lambda (x1) (/. 1 (+ 1 (%exp (- x1))))))
+(define-f2-array-op-unary! sigmoid (lambda (x1) (/. 1 (+ 1 (%exp (- x1))))))
 
 ;; 行列の要素に対して、ReLU関数を計算
-(define f2-array-relu
-  (if *eigenmat-loaded*
-    eigen-array-relu
-    (lambda (ar1)
-      (f2-array-map
-       (lambda (x1) (if (> x1 0) x1 0)) ; ReLU関数
-       ar1))))
-
-;; 行列の要素に対して、ReLU関数を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
-(define f2-array-relu!
-  (if *eigenmat-loaded*
-    eigen-array-relu!
-    (lambda (ar2 ar1)
-      (f2-array-map!
-       ar2
-       (lambda (x1) (if (> x1 0) x1 0)) ; ReLU関数
-       ar1)
-      ar2)))
+(define-f2-array-op-unary  relu (lambda (x1) (if (> x1 0) x1 0)))
+(define-f2-array-op-unary! relu (lambda (x1) (if (> x1 0) x1 0)))
 
 ;; 行列の要素に対して、ステップ関数を計算
-(define f2-array-step
-  (if *eigenmat-loaded*
-    eigen-array-step
-    (lambda (ar1)
-      (f2-array-map
-       (lambda (x1) (if (> x1 0) 1 0)) ; ステップ関数
-       ar1))))
-
-;; 行列の要素に対して、ステップ関数を計算(破壊的変更版)
-;; (第1引数は結果を格納するためだけに使用)
-(define f2-array-step!
-  (if *eigenmat-loaded*
-    eigen-array-step!
-    (lambda (ar2 ar1)
-      (f2-array-map!
-       ar2
-       (lambda (x1) (if (> x1 0) 1 0)) ; ステップ関数
-       ar1)
-      ar2)))
+(define-f2-array-op-unary  step (lambda (x1) (if (> x1 0) 1 0)))
+(define-f2-array-op-unary! step (lambda (x1) (if (> x1 0) 1 0)))
 
 ;; 行列の要素の和を計算
 (define f2-array-sum

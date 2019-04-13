@@ -147,6 +147,21 @@
     行列A の要素に対して、自然対数を計算して返します。  
     `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
 
+  - `(f2-array-sinh A)`  
+    `(f2-array-sinh! B A)`  
+    行列A の要素に対して、sinh を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-cosh A)`  
+    `(f2-array-cosh! B A)`  
+    行列A の要素に対して、cosh を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
+  - `(f2-array-tanh A)`  
+    `(f2-array-tanh! B A)`  
+    行列A の要素に対して、tanh を計算して返します。  
+    `!` がついたものは、結果を 行列B に格納して返します (行列B は変更されます)。
+
   - `(f2-array-sigmoid A)`  
     `(f2-array-sigmoid! B A)`  
     行列A の要素に対して、シグモイド関数 を計算して返します。  
@@ -275,6 +290,9 @@
 - 2019-3-27  v1.07 演算処理見直し等
 - 2019-3-28  v1.08 gauche.versionのuseを追加
 - 2019-4-7   v1.09 引数チェック強化(make-f2-array,make-f2-array-same-shape)
+- 2019-4-13  v1.10 f2-array-sinh,f2-array-sinh!,  
+  f2-array-cosh,f2-array-cosh!,  
+  f2-array-tanh,f2-array-tanh!を追加
 
 
-(2019-4-7)
+(2019-4-13)
