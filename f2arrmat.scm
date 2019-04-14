@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-4-13 v1.11
+;; 2019-4-14 v1.12
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -52,6 +52,7 @@
     f2-array-mean
     f2-array-trace
     f2-array-determinant
+    f2-array-identity     f2-array-identity!
     f2-array-transpose    f2-array-transpose!
     f2-array-inverse      f2-array-inverse!
     f2-array-solve        f2-array-solve!
@@ -497,6 +498,7 @@
   (if *eigenmat-loaded*
     eigen-array-sum
     (lambda (ar1)
+      (check-array-type ar1)
       (let ((v1  (slot-ref ar1 'backing-storage))
             (ret 0))
         (for-each (lambda (x1) (inc! ret x1)) v1)
@@ -507,6 +509,7 @@
   (if *eigenmat-loaded*
     eigen-array-min
     (lambda (ar1)
+      (check-array-type ar1)
       (let* ((v1  (slot-ref ar1 'backing-storage))
              (ret (f64vector-ref v1 0)))
         (for-each (lambda (x1) (if (< x1 ret) (set! ret x1))) v1)
@@ -517,6 +520,7 @@
   (if *eigenmat-loaded*
     eigen-array-max
     (lambda (ar1)
+      (check-array-type ar1)
       (let* ((v1  (slot-ref ar1 'backing-storage))
              (ret (f64vector-ref v1 0)))
         (for-each (lambda (x1) (if (> x1 ret) (set! ret x1))) v1)
@@ -527,6 +531,7 @@
   (if *eigenmat-loaded*
     eigen-array-mean
     (lambda (ar1)
+      (check-array-type ar1)
       (let ((v1  (slot-ref ar1 'backing-storage))
             (ret 0))
         (for-each (lambda (x1) (inc! ret x1)) v1)
@@ -543,17 +548,43 @@
             (m1  (array-length ar1 1))
             (v1  (slot-ref ar1 'backing-storage))
             (ret 0))
-        (let loop ((i1 0))
-          (inc! ret (f64vector-ref v1 (+ (* i1 m1) i1)))
-          (if (and (< i1 (- n1 1)) (< i1 (- m1 1)))
-            (loop (+ i1 1))
-            ret))))))
+        (dotimes (i1 (min n1 m1))
+          (inc! ret (f64vector-ref v1 (+ (* i1 m1) i1))))
+        ret))))
 
 ;; 行列式を計算
 (define f2-array-determinant
   (if *eigenmat-loaded*
     eigen-array-determinant
     determinant))
+
+;; 単位行列を計算
+(define f2-array-identity
+  (if *eigenmat-loaded*
+    eigen-array-identity
+    (lambda (n1 m1)
+      (unless (and (>= n1 0) (>= m1 0))
+        (error "invalid array size"))
+      (let* ((ar1 (make-f2-array 0 n1 0 m1 0))
+             (v1  (slot-ref ar1 'backing-storage)))
+        (dotimes (i1 (min n1 m1))
+          (f64vector-set! v1 (+ (* i1 m1) i1) 1))
+        ar1))))
+
+;; 単位行列を計算(破壊的変更版)
+(define f2-array-identity!
+  (if *eigenmat-loaded*
+    eigen-array-identity!
+    (lambda (ar1)
+      (check-array-type ar1)
+      (check-array-rank ar1)
+      (let ((n1 (array-length ar1 0))
+            (m1 (array-length ar1 1))
+            (v1 (slot-ref ar1 'backing-storage)))
+        (f64vector-fill! v1 0)
+        (dotimes (i1 (min n1 m1))
+          (f64vector-set! v1 (+ (* i1 m1) i1) 1))
+        ar1))))
 
 ;; 転置行列を計算
 (define f2-array-transpose

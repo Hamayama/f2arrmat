@@ -195,6 +195,11 @@
   - `(f2-array-determinant A)`  
     行列A の行列式を計算して返します。
 
+  - `(f2-array-identity n m)`  
+    `(f2-array-identity! A)`  
+    サイズが n x m の単位行列を返します。  
+    `!` がついたものは、行列A を (サイズは変えずに) 単位行列にして返します (行列A は変更されます)。
+
   - `(f2-array-transpose A)`  
     `(f2-array-transpose! B A)`  
     行列A の転置行列を返します。  
@@ -294,6 +299,8 @@
   f2-array-cosh,f2-array-cosh!,  
   f2-array-tanh,f2-array-tanh!を追加
 - 2019-4-13  v1.11 一部マクロ化
+- 2019-4-14  v1.12 f2-array-identity,f2-array-identity!を追加  
+  引数チェック追加等
 
 
-(2019-4-13)
+(2019-4-14)

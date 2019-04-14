@@ -256,6 +256,16 @@
   (test* "f2-array-determinant 2" (test-error <error>)
          (f2-array-determinant K))
 
+  (test* "f2-array-identity  1" #,(<f64array> (0 2 0 2) 1 0 0 1)
+         (f2-array-identity  2 2) f2-array-nearly=?)
+  (test* "f2-array-identity  2" #,(<f64array> (0 2 0 3) 1 0 0 0 1 0)
+         (f2-array-identity  2 3) f2-array-nearly=?)
+
+  (test* "f2-array-identity! 1" #,(<f64array> (0 2 0 2) 1 0 0 1)
+         (f2-array-identity! (make-f2-array 0 2 0 2)) f2-array-nearly=?)
+  (test* "f2-array-identity! 2" #,(<f64array> (0 2 0 3) 1 0 0 0 1 0)
+         (f2-array-identity! (make-f2-array 0 2 0 3)) f2-array-nearly=?)
+
   (test* "f2-array-transpose  1" #,(<f64array> (0 2 0 2) 1 3 2 4)
          (f2-array-transpose  A) f2-array-nearly=?)
   (test* "f2-array-transpose  2" #,(<f64array> (0 3 0 2) -2 1 -1 2 0 3)
