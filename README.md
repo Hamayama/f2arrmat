@@ -34,9 +34,9 @@
     行列のキャッシュの使用(ON)/未使用(OFF)を設定します。デフォルトは使用(ON)です。  
     (行列のキャッシュについては、後述の make-f2-array の説明を参照ください)
 
-  - `(make-f2-array ns ne ms me [maybe-init])`  
+  - `(make-f2-array ms me ns ne [maybe-init])`  
     行列 (2次元のf64array) を生成します。  
-    ns ne ms me には、行列の shape を指定します。  
+    ms me ns ne には、行列の shape を指定します。  
     例えば、2x3 の行列を生成する場合には、  
     `(make-f2-array 0 2 0 3)` のように指定します。  
     maybe-init には要素の初期値を指定します。  
@@ -52,9 +52,9 @@
     maybe-init には要素の初期値を指定します。  
     maybe-init は省略可能です。省略した場合は 0 を指定したことになります。
 
-  - `(f2-array ns ne ms me . inits)`  
+  - `(f2-array ms me ns ne . inits)`  
     初期化データを指定して、行列 (2次元のf64array) を生成します。  
-    ns ne ms me には、行列の shape を指定します。  
+    ms me ns ne には、行列の shape を指定します。  
     inits には、行列の要素の数だけ初期化データを並べます。  
     例えば、2x3 の行列を生成する場合には、  
     `(f2-array 0 2 0 3 1 2 3 4 5 6)` のように指定します。
@@ -195,9 +195,9 @@
   - `(f2-array-determinant A)`  
     行列A の行列式を計算して返します。
 
-  - `(f2-array-identity n m)`  
+  - `(f2-array-identity m n)`  
     `(f2-array-identity! A)`  
-    サイズが n x m の単位行列を返します。  
+    サイズが m x n の単位行列を返します。  
     `!` がついたものは、行列A を (サイズは変えずに) 単位行列にして返します (行列A は変更されます)。
 
   - `(f2-array-transpose A)`  
@@ -301,6 +301,7 @@
 - 2019-4-13  v1.11 一部マクロ化
 - 2019-4-14  v1.12 f2-array-identity,f2-array-identity!を追加  
   引数チェック追加等
+- 2019-4-18  v1.13 変数のmとnを交換(m=行数,n=列数に統一した(教科書の記述に合わせた))
 
 
-(2019-4-14)
+(2019-4-18)
