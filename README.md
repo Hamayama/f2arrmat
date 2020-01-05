@@ -9,8 +9,8 @@
 
 
 ## インストール方法
-  - f2arrmat.scm を Gauche でロード可能なフォルダにコピーします。  
-    (例えば (gauche-site-library-directory) で表示されるフォルダ等)
+- f2arrmat.scm を Gauche でロード可能なフォルダにコピーします。  
+  (例えば (gauche-site-library-directory) で表示されるフォルダ等)
 
 
 ## 使い方
@@ -273,8 +273,10 @@
 - OS
   - Windows 8.1 (64bit)
 - 環境
-  - MSYS2/MinGW-w64 (64bit/32bit) (gcc version 7.3.0 (Rev2, Built by MSYS2 project))
+  - MSYS2/MinGW-w64 (64bit/32bit) (gcc version 9.2.0 (Rev2, Built by MSYS2 project))
 - 言語
+  - Gauche v0.9.9
+  - Gauche v0.9.8
   - Gauche v0.9.7
 
 ## 履歴
@@ -303,6 +305,7 @@
   引数チェック追加等
 - 2019-4-18  v1.13 変数のmとnを交換(m=行数,n=列数に統一した(教科書の記述に合わせた))
 - 2019-4-18  v1.14 v1.13の変更を元に戻した(n=行数,m=列数という流儀もあるもよう。。。)
+- 2020-1-5   v1.15 コメント変更のみ(Gauche v0.9.9 で動作確認)
 
 
-(2019-4-18)
+(2020-1-5)

@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2019-4-18 v1.14
+;; 2020-1-5 v1.15
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -79,9 +79,9 @@
        (load "blasmat" :error-if-not-found #f)))
 
 ;; s32vector をハッシュテーブルのキーに使えるようにする
-;; (Gauche の開発最新版では、デフォルトで使用可能)
+;; (Gauche v0.9.8 からは、デフォルトで使用可能)
 (when (guard (ex (else #t)) (default-hash #s32(1)) #f)
-  ;; for Gauche v0.9.4
+  ;; for Gauche v0.9.4 - v0.9.7
   (if (version<=? (gauche-version) "0.9.4")
     (define-method object-hash ((obj <s32vector>))
       (hash (s32vector->vector obj)))
