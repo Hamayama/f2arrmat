@@ -72,14 +72,14 @@
     )
 
   (test* "f2-array-map 1" B
-         (f2-array-map (lambda (d1) (+ d1 4)) A) f2-array-nearly=?)
+         (f2-array-map (lambda (x) (+ x 4)) A) f2-array-nearly=?)
   (test* "f2-array-map 2" L
-         (f2-array-map (lambda (d1) (- d1 1))
+         (f2-array-map (lambda (x) (- x 1))
                        (array (shape 0 2 0 3) -1 0 1 2 3 4)) f2-array-nearly=?)
 
   (let1 A1 (make-f2-array 0 2 0 2)
     (test* "f2-array-map! 1" B
-           (begin (f2-array-map! A1 (lambda (d1) (+ d1 4)) A) A1) f2-array-nearly=?)
+           (begin (f2-array-map! A1 (lambda (x) (+ x 4)) A) A1) f2-array-nearly=?)
     )
 
   (test* "make-f2-array 1" F
@@ -221,6 +221,7 @@
                                   0 2 0 2
                                   (sigmoid 5) (sigmoid 6) (sigmoid 7) (sigmoid 8))
            (f2-array-sigmoid  B) f2-array-nearly=?)
+    (test* "f2-array-sigmoid  2" (f2-array-map sigmoid A) (f2-array-sigmoid A))
 
     (test* "f2-array-sigmoid! 1" (f2-array
                                   0 2 0 2
@@ -241,6 +242,9 @@
     )
 
   (test* "f2-array-sum  1" 26   (f2-array-sum  B) nearly=?)
+  (test* "f2-array-sum  2" (rlet1 ret 0
+                             (f2-array-map (lambda (x) (inc! ret x)) A))
+         (f2-array-sum  A) nearly=?)
 
   (test* "f2-array-min  1" 5    (f2-array-min  B) nearly=?)
 
@@ -348,7 +352,10 @@
   )
 
 (test-section "use eigenmat and blasmat")
+(test-log "*eigenmat-loaded*: ~a" (with-module f2arrmat *eigenmat-loaded*))
+(test-log "*blasmat-loaded* : ~a" (with-module f2arrmat *blasmat-loaded*))
 (run-test)
+;(read-line)
 
 (test-section "don't use eigenmat")
 (select-module f2arrmat)
