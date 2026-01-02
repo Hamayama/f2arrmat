@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2020-1-5 v1.15
+;; 2026-1-2 v1.16
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -64,6 +64,17 @@
     ))
 (select-module f2arrmat)
 
+;; Gauche 0.9.16_pre1 で、gauche.array の内部処理が変わった件の対応
+(define *gauche-0.9.15-or-earlier*
+  (version<=? (gauche-version) "0.9.15"))
+
+;; Gauche 0.9.13_pre1 で、実数限定の %sin, %cos, %expt 等がなくなった件の対応
+;; (SRFI-94 (real-sin, real-cos, real-expt 等) ができたため)
+(define-macro (use-compat-real-elementary-functions)
+  (when (version>=? (gauche-version) "0.9.13_pre1")
+    `(use compat.real-elementary-functions)))
+(use-compat-real-elementary-functions)
+
 ;; eigenmat モジュールのロード
 ;; (存在しなければ使用しない)
 ;(define *disable-eigenmat* #t) ; 無効化フラグ
@@ -98,37 +109,6 @@
 (define (f2-array-cache-off)
   (set! use-f2-array-cache #f))
 
-;; gauche.array の shape の内部処理を上書き(高速化)
-(select-module gauche.array)
-(define (shape->start/end-vector shape)
-  (let* ([rank (array-end shape 0)]
-         [cnt  (iota rank)]
-         [vec  (slot-ref shape 'backing-storage)])
-    ;(values (map-to <s32vector> (^i (array-ref shape i 0)) cnt)
-    ;        (map-to <s32vector> (^i (array-ref shape i 1)) cnt))))
-    (values (map-to <s32vector> (^i (vector-ref vec (* i 2))) cnt)
-            (map-to <s32vector> (^i (vector-ref vec (+ (* i 2) 1))) cnt))))
-(select-module f2arrmat)
-
-;; 行列の情報取得(エラーチェックなし)
-(define-syntax array-rank
-  (syntax-rules ()
-    ((_ A)
-     (s32vector-length (slot-ref A 'start-vector)))))
-(define-syntax array-start
-  (syntax-rules ()
-    ((_ A dim)
-     (s32vector-ref    (slot-ref A 'start-vector) dim))))
-(define-syntax array-end
-  (syntax-rules ()
-    ((_ A dim)
-     (s32vector-ref    (slot-ref A 'end-vector)   dim))))
-(define-syntax array-length
-  (syntax-rules ()
-    ((_ A dim)
-     (- (s32vector-ref (slot-ref A 'end-vector)   dim)
-        (s32vector-ref (slot-ref A 'start-vector) dim)))))
-
 ;; 行列のタイプのチェック
 (define-syntax check-array-type
   (syntax-rules ()
@@ -147,26 +127,32 @@
      (unless (= (array-rank A) (array-rank B) ... 2)
        (error "array rank must be 2")))))
 
-;; 行列の要素の参照(2次元のみ)(タイプと次元数のエラーチェックなし)
-(define (f2-array-ref A i j)
-  (let ((n1 (array-length A 0))
-        (m1 (array-length A 1))
-        (i1 (- i (array-start A 0)))
-        (j1 (- j (array-start A 1))))
-    (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
-      (error "invalid index value"))
-    (f64vector-ref  (slot-ref A 'backing-storage) (+ (* i1 m1) j1))))
+;; 行列の要素の参照(Gauche 0.9.16_pre1 で高速化されたため、標準版に変更)
+(define f2-array-ref
+  (if *gauche-0.9.15-or-earlier*
+    (lambda (A i j)
+      (let ((n1 (array-length A 0))
+            (m1 (array-length A 1))
+            (i1 (- i (array-start A 0)))
+            (j1 (- j (array-start A 1))))
+        (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
+          (error "invalid index value"))
+        (f64vector-ref (slot-ref A 'backing-storage) (+ (* i1 m1) j1))))
+    array-ref))
 
-;; 行列の要素の設定(2次元のみ)(タイプと次元数のエラーチェックなし)
+;; 行列の要素の設定(Gauche 0.9.16_pre1 で高速化されたため、標準版に変更)
 ;; (戻り値は未定義)
-(define (f2-array-set! A i j d)
-  (let ((n1 (array-length A 0))
-        (m1 (array-length A 1))
-        (i1 (- i (array-start A 0)))
-        (j1 (- j (array-start A 1))))
-    (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
-      (error "invalid index value"))
-    (f64vector-set! (slot-ref A 'backing-storage) (+ (* i1 m1) j1) d)))
+(define f2-array-set!
+  (if *gauche-0.9.15-or-earlier*
+    (lambda (A i j d)
+      (let ((n1 (array-length A 0))
+            (m1 (array-length A 1))
+            (i1 (- i (array-start A 0)))
+            (j1 (- j (array-start A 1))))
+        (unless (and (>= i1 0) (>= j1 0) (< i1 n1) (< j1 m1))
+          (error "invalid index value"))
+        (f64vector-set! (slot-ref A 'backing-storage) (+ (* i1 m1) j1) d)))
+    array-set!))
 
 ;; 行列の要素の埋めつくし(エラーチェックなし)
 ;; (戻り値は未定義)
@@ -174,22 +160,35 @@
   (f64vector-fill! (slot-ref A 'backing-storage) d))
 
 ;; 行列のコピー(エラーチェックなし)
-(define (array-copy A)
-  (make (class-of A)
-    :start-vector    (slot-ref A 'start-vector)
-    :end-vector      (slot-ref A 'end-vector)
-    :mapper          (slot-ref A 'mapper)
-    :backing-storage (let1 v (slot-ref A 'backing-storage)
-                       (if (vector? v)
-                         (vector-copy v)
-                         (uvector-copy v)))))
+(define array-copy
+  (if *gauche-0.9.15-or-earlier*
+    (lambda (A)
+      (make (class-of A)
+        :start-vector    (slot-ref A 'start-vector)
+        :end-vector      (slot-ref A 'end-vector)
+        :mapper          (slot-ref A 'mapper)
+        :backing-storage (let1 v (slot-ref A 'backing-storage)
+                           (if (vector? v)
+                             (vector-copy v)
+                             (uvector-copy v)))))
+    (lambda (A)
+      (make (class-of A)
+        :start-vector       (slot-ref A 'start-vector)
+        :end-vector         (slot-ref A 'end-vector)
+        :coefficient-vector (slot-ref A 'coefficient-vector)
+        :backing-storage    (let1 v (slot-ref A 'backing-storage)
+                              (if (vector? v)
+                                (vector-copy v)
+                                (uvector-copy v)))))))
 
 ;; 行列のコピー(破壊的変更版)(タイプかサイズが違うときはエラー)
 ;; (戻り値は未定義)
 (define (array-copy! A B)
   (slot-set! A 'start-vector (slot-ref B 'start-vector))
   (slot-set! A 'end-vector   (slot-ref B 'end-vector))
-  (slot-set! A 'mapper       (slot-ref B 'mapper))
+  (if *gauche-0.9.15-or-earlier*
+    (slot-set! A 'mapper             (slot-ref B 'mapper))
+    (slot-set! A 'coefficient-vector (slot-ref B 'coefficient-vector)))
   (let ((v1 (slot-ref A 'backing-storage))
         (v2 (slot-ref B 'backing-storage)))
     (cond
@@ -206,11 +205,17 @@
 (define (f2-array-copy A)
   (if (eq? (class-of A) <f64array>)
     (array-copy A)
-    (make <f64array>
-      :start-vector    (slot-ref A 'start-vector)
-      :end-vector      (slot-ref A 'end-vector)
-      :mapper          (slot-ref A 'mapper)
-      :backing-storage (coerce-to <f64vector> (slot-ref A 'backing-storage)))))
+    (if *gauche-0.9.15-or-earlier*
+      (make <f64array>
+        :start-vector    (slot-ref A 'start-vector)
+        :end-vector      (slot-ref A 'end-vector)
+        :mapper          (slot-ref A 'mapper)
+        :backing-storage (coerce-to <f64vector> (slot-ref A 'backing-storage)))
+      (make <f64array>
+        :start-vector       (slot-ref A 'start-vector)
+        :end-vector         (slot-ref A 'end-vector)
+        :coefficient-vector (slot-ref A 'coefficient-vector)
+        :backing-storage    (coerce-to <f64vector> (slot-ref A 'backing-storage))))))
 
 ;; f64array 用の array-copy! (エラーチェックなし)
 ;; (戻り値は未定義)
@@ -220,7 +225,8 @@
 (define (f2-array-map proc ar1 . rest)
   (rlet1 ar (if (eq? (class-of ar1) <f64array>)
               (array-copy ar1)
-              (make-f64array (array-shape ar1)))
+              (make-f2-array (array-start ar1 0) (array-end ar1 0)
+                             (array-start ar1 1) (array-end ar1 1)))
     (apply array-map! ar proc ar1 rest)))
 
 ;; f64array 用の array-map! (エラーチェックなし)
@@ -269,7 +275,20 @@
 
 ;; gauche.array の行列の生成の内部処理を上書き(キャッシュ使用のため)
 (select-module gauche.array)
-(define (%make-array-internal-orig class shape . maybe-init)
+;; Gauche 0.9.16_pre1 で、gauche.array の内部処理が変わった件の対応
+(define *gauche-0.9.15-or-earlier*
+  (with-module f2arrmat *gauche-0.9.15-or-earlier*))
+(define-macro (%define-dummy-functions)
+  (if *gauche-0.9.15-or-earlier*
+    `(begin
+       (define (coefficient-vector Vb Ve))
+       (define (%array-size Vb Ve)))
+    `(begin
+       (define (generate-amap Vb Ve))
+       (define (backing-storage-creator-of class)))))
+(%define-dummy-functions)
+;; (Gauche 0.9.15 までの場合)
+(define (%make-array-internal-orig-v1 class shape . maybe-init)
   (receive (Vb Ve) (shape->start/end-vector shape)
     (make class
       :start-vector Vb
@@ -278,40 +297,80 @@
       :backing-storage (apply (backing-storage-creator-of class)
                               (fold * 1 (s32vector-sub Ve Vb))
                               maybe-init))))
-(define (make-array-internal class shape . maybe-init)
-  (if (and (with-module f2arrmat use-f2-array-cache)
-           (eq? class <f64array>)
-           (equal? (slot-ref shape 'end-vector) #s32(2 2))) ; rank 2 only
-    (receive (Vb Ve) (shape->start/end-vector shape)
-      (let ((ns (s32vector-ref Vb 0))
-            (ne (s32vector-ref Ve 0))
-            (ms (s32vector-ref Vb 1))
-            (me (s32vector-ref Ve 1)))
-        (apply (with-module f2arrmat make-f2-array) ns ne ms me maybe-init)))
-    (apply %make-array-internal-orig class shape maybe-init)))
+;; (Gauche 0.9.16 pre1 以後の場合)
+(define (%make-array-internal-orig-v2 class shape
+                                      :key init-1 init-list)
+  (receive (Vb Ve) (shape->start/end-vector shape)
+    (let ([Vc (coefficient-vector Vb Ve)]
+          [bsclass (~ class'backing-storage-class)]
+          [bslen (fold * 1 (s32vector-sub Ve Vb))])
+      (make class
+        :start-vector Vb
+        :end-vector Ve
+        :coefficient-vector Vc
+        :backing-storage
+        (cond [(pair? init-list)
+               (unless (= (%array-size Vb Ve) (length init-list))
+                 (error "Array initialization list doesn't match array size"
+                        init-list))
+               (coerce-to bsclass init-list)]
+              [(undefined? init-1)
+               (if (eq? bsclass <vector>)
+                 (make-vector bslen)
+                 (make-uvector bsclass bslen))]
+              [else
+               (if (eq? bsclass <vector>)
+                 (make-vector bslen init-1)
+                 (make-uvector bsclass bslen init-1))])))))
+(define %make-array-internal-orig
+  (if *gauche-0.9.15-or-earlier*
+    %make-array-internal-orig-v1
+    (lambda (class shape . maybe-init)
+      (if (null? maybe-init)
+        (%make-array-internal-orig-v2 class shape)
+        (%make-array-internal-orig-v2 class shape :init-1 (car maybe-init))))))
+(define make-array-internal
+  (if *gauche-0.9.15-or-earlier*
+    (lambda (class shape . maybe-init)
+      (if (and (with-module f2arrmat use-f2-array-cache)
+               (eq? class <f64array>)
+               (equal? (slot-ref shape 'end-vector) #s32(2 2))) ; rank 2 only
+        (let* ((bs (slot-ref shape 'backing-storage))
+               (ns (vector-ref bs 0))
+               (ne (vector-ref bs 1))
+               (ms (vector-ref bs 2))
+               (me (vector-ref bs 3)))
+          (apply (with-module f2arrmat make-f2-array) ns ne ms me maybe-init))
+        (apply %make-array-internal-orig-v1 class shape maybe-init)))
+    (lambda (class shape :key init-1 init-list)
+      (if (and (with-module f2arrmat use-f2-array-cache)
+               (eq? class <f64array>)
+               (equal? (slot-ref shape 'end-vector) #s32(2 2))) ; rank 2 only
+        (let* ((bs (slot-ref shape 'backing-storage))
+               (ns (vector-ref bs 0))
+               (ne (vector-ref bs 1))
+               (ms (vector-ref bs 2))
+               (me (vector-ref bs 3)))
+          (cond
+           ((pair? init-list)
+            (apply (with-module f2arrmat f2-array) ns ne ms me init-list))
+           ((undefined? init-1)
+            ((with-module f2arrmat make-f2-array) ns ne ms me))
+           (else
+            ((with-module f2arrmat make-f2-array) ns ne ms me init-1))))
+        (%make-array-internal-orig-v2 class shape :init-1 init-1 :init-list init-list)))))
 (select-module f2arrmat)
 
-;; 転置行列の生成(Gauche v0.9.7 の不具合対応(resの生成のところ) + 高速化)
+;; 転置行列の生成(内部処理用)(Gauche v0.9.7 の不具合対応(resの生成のところ))
 (define (%array-transpose a :optional (dim1 0) (dim2 1))
   (let* ([sh (array-copy (array-shape a))]
          [rank (array-rank a)]
-         ;[tmp0 (array-ref sh dim1 0)]
-         ;[tmp1 (array-ref sh dim1 1)])
-         [vec  (slot-ref sh 'backing-storage)]
-         [vs1  (* dim1 2)]
-         [ve1  (+ vs1  1)]
-         [vs2  (* dim2 2)]
-         [ve2  (+ vs2  1)]
-         [tmp0 (vector-ref vec vs1)]
-         [tmp1 (vector-ref vec ve1)])
-    ;(array-set! sh dim1 0 (array-ref sh dim2 0))
-    ;(array-set! sh dim1 1 (array-ref sh dim2 1))
-    ;(array-set! sh dim2 0 tmp0)
-    ;(array-set! sh dim2 1 tmp1)
-    (vector-set! vec vs1 (vector-ref vec vs2))
-    (vector-set! vec ve1 (vector-ref vec ve2))
-    (vector-set! vec vs2 tmp0)
-    (vector-set! vec ve2 tmp1)
+         [tmp0 (array-ref sh dim1 0)]
+         [tmp1 (array-ref sh dim1 1)])
+    (array-set! sh dim1 0 (array-ref sh dim2 0))
+    (array-set! sh dim1 1 (array-ref sh dim2 1))
+    (array-set! sh dim2 0 tmp0)
+    (array-set! sh dim2 1 tmp1)
     ;(rlet1 res (array-copy a)
     (rlet1 res ((with-module gauche.array make-array-internal) (class-of a) sh)
       (array-for-each-index a
