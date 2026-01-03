@@ -280,6 +280,7 @@
   - MSYS2/MinGW-w64 (64bit/32bit) (gcc version 9.2.0 (Rev2, Built by MSYS2 project))
 - 言語
   - Gauche v0.9.16_pre2
+  - Gauche v0.9.15
   - Gauche v0.9.9
   - Gauche v0.9.8
   - Gauche v0.9.7
@@ -313,6 +314,7 @@
 - 2019-4-18  v1.14 v1.13の変更を元に戻した(n=行数,m=列数という流儀もあるもよう。。。)
 - 2020-1-5   v1.15 コメント変更のみ(Gauche v0.9.9 で動作確認)
 - 2026-1-2   v1.16 Gauche v0.9.16_pre2 対応
+- 2026-1-3   v1.17 Gauche v0.9.15 で遅くなっていたため対策
 
 
-(2026-1-2)
+(2026-1-3)

@@ -1,7 +1,7 @@
 ;; -*- coding: utf-8 -*-
 ;;
 ;; f2arrmat.scm
-;; 2026-1-2 v1.16
+;; 2026-1-3 v1.17
 ;;
 ;; ＜内容＞
 ;;   Gauche で、行列 (2次元の f64array) を扱うためのモジュールです。
@@ -67,6 +67,10 @@
 ;; Gauche 0.9.16_pre1 で、gauche.array の内部処理が変わった件の対応
 (define *gauche-0.9.15-or-earlier*
   (version<=? (gauche-version) "0.9.15"))
+(select-module gauche.array)
+(define *gauche-0.9.15-or-earlier*
+  (with-module f2arrmat *gauche-0.9.15-or-earlier*))
+(select-module f2arrmat)
 
 ;; Gauche 0.9.13_pre1 で、実数限定の %sin, %cos, %expt 等がなくなった件の対応
 ;; (SRFI-94 (real-sin, real-cos, real-expt 等) ができたため)
@@ -108,6 +112,22 @@
   (set! use-f2-array-cache #t))
 (define (f2-array-cache-off)
   (set! use-f2-array-cache #f))
+
+;; gauche.array の内部処理を上書き(高速化)(エラーチェックなし)
+(select-module gauche.array)
+(define-macro (%define-array-rank-function)
+  (when *gauche-0.9.15-or-earlier*
+    `(define (array-rank A)
+       (s32vector-length (slot-ref A 'start-vector)))))
+(%define-array-rank-function)
+(define (array-start  A dim)
+  (s32vector-ref (slot-ref A 'start-vector) dim))
+(define (array-end    A dim)
+  (s32vector-ref (slot-ref A 'end-vector)   dim))
+(define (array-length A dim)
+  (- (s32vector-ref (slot-ref A 'end-vector)   dim)
+     (s32vector-ref (slot-ref A 'start-vector) dim)))
+(select-module f2arrmat)
 
 ;; 行列のタイプのチェック
 (define-syntax check-array-type
@@ -275,9 +295,7 @@
 
 ;; gauche.array の行列の生成の内部処理を上書き(キャッシュ使用のため)
 (select-module gauche.array)
-;; Gauche 0.9.16_pre1 で、gauche.array の内部処理が変わった件の対応
-(define *gauche-0.9.15-or-earlier*
-  (with-module f2arrmat *gauche-0.9.15-or-earlier*))
+;; (Gauche 0.9.16_pre1 で、gauche.array の内部処理が変わった件の対応)
 (define-macro (%define-dummy-functions)
   (if *gauche-0.9.15-or-earlier*
     `(begin
@@ -297,7 +315,7 @@
       :backing-storage (apply (backing-storage-creator-of class)
                               (fold * 1 (s32vector-sub Ve Vb))
                               maybe-init))))
-;; (Gauche 0.9.16 pre1 以後の場合)
+;; (Gauche 0.9.16_pre1 以後の場合)
 (define (%make-array-internal-orig-v2 class shape
                                       :key init-1 init-list)
   (receive (Vb Ve) (shape->start/end-vector shape)
